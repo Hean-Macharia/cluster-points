@@ -511,6 +511,55 @@
             margin-bottom: 25px;
             border: 2px solid #dee2e6;
         }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 0 20px;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--kuccps-medium-grey);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .step.active .step-number {
+            background: var(--kuccps-red);
+        }
+        
+        .step.completed .step-number {
+            background: var(--kuccps-green);
+        }
+        
+        .step-line {
+            position: absolute;
+            top: 20px;
+            left: -50%;
+            width: 100%;
+            height: 2px;
+            background: var(--kuccps-medium-grey);
+            z-index: -1;
+        }
+        
+        .step:first-child .step-line {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -520,73 +569,94 @@
         <div class="mt-3" style="color: var(--kuccps-red); font-weight: 700;" id="loadingText">Loading...</div>
     </div>
 
-    <!-- Registration Modal -->
-    <div class="modal fade" id="registrationModal" tabindex="-1">
+    <!-- Step 2: User Details Modal -->
+    <div class="modal fade" id="userDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Register for KCSE Cluster Points Calculator</h5>
+                    <h5 class="modal-title">Step 2: Enter Your Details</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="payment-modal-content">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Service Fee:</strong> Ksh 100 required for calculation. Pay once, calculate unlimited times.
+                    <!-- Step Indicator -->
+                    <div class="step-indicator">
+                        <div class="step completed">
+                            <div class="step-number">1</div>
+                            <span>Enter Grades</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step active">
+                            <div class="step-number">2</div>
+                            <span>Your Details</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <span>Payment</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <span>Results</span>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Important:</strong> You need to register and pay Ksh 100 to calculate your cluster points.
+                    </div>
+                    
+                    <form id="userDetailsForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="user_kcse_index" class="form-label">
+                                        <i class="fas fa-id-card me-1"></i> KCSE Index Number
+                                    </label>
+                                    <input type="text" class="form-control" id="user_kcse_index" 
+                                           placeholder="12345678912/2024" required>
+                                    <div class="form-text">Format: 11 digits followed by /year</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="user_email" class="form-label">
+                                        <i class="fas fa-envelope me-1"></i> Email Address
+                                    </label>
+                                    <input type="email" class="form-control" id="user_email" 
+                                           placeholder="your.email@example.com" required>
+                                </div>
+                            </div>
                         </div>
                         
-                        <form id="registrationForm">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="kcse_index" class="form-label">
-                                            <i class="fas fa-id-card me-1"></i> KCSE Index Number
-                                        </label>
-                                        <input type="text" class="form-control" id="kcse_index" 
-                                               placeholder="12345678912/2024" required>
-                                        <div class="form-text">Format: 11 digits followed by /year</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="email" class="form-label">
-                                            <i class="fas fa-envelope me-1"></i> Email Address
-                                        </label>
-                                        <input type="email" class="form-control" id="email" 
-                                               placeholder="your.email@example.com" required>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label for="phone_number" class="form-label">
-                                    <i class="fas fa-phone me-1"></i> M-Pesa Phone Number
-                                </label>
-                                <input type="tel" class="form-control" id="phone_number" 
-                                       placeholder="0712345678 or 254712345678" required>
-                                <div class="form-text">For payment and results delivery</div>
-                            </div>
-                            
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-register" id="registerBtn">
-                                    <i class="fas fa-credit-card me-2"></i> Register & Pay Ksh 100
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                                    <i class="fas fa-times me-2"></i> Cancel
-                                </button>
-                            </div>
-                        </form>
-                        
-                        <div class="mt-4 mpesa-instructions">
-                            <h6><i class="fas fa-mobile-alt me-2"></i>Payment Instructions:</h6>
-                            <ol class="mb-0">
-                                <li>Enter your M-Pesa registered phone number</li>
-                                <li>Click "Register & Pay Ksh 100"</li>
-                                <li>Check your phone for STK Push notification</li>
-                                <li>Enter your M-Pesa PIN to complete payment</li>
-                                <li>Once payment is confirmed, you can calculate your cluster points</li>
-                            </ol>
+                        <div class="mb-4">
+                            <label for="user_phone_number" class="form-label">
+                                <i class="fas fa-phone me-1"></i> M-Pesa Phone Number
+                            </label>
+                            <input type="tel" class="form-control" id="user_phone_number" 
+                                   placeholder="0712345678 or 254712345678" required>
+                            <div class="form-text">For payment and results delivery</div>
                         </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-register" id="continueToPaymentBtn">
+                                <i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4 mpesa-instructions">
+                        <h6><i class="fas fa-mobile-alt me-2"></i>Payment Instructions:</h6>
+                        <ol class="mb-0">
+                            <li>Enter your M-Pesa registered phone number</li>
+                            <li>Click "Continue to Payment"</li>
+                            <li>Check your phone for STK Push notification</li>
+                            <li>Enter your M-Pesa PIN to complete payment</li>
+                            <li>Once payment is confirmed, your cluster points will be calculated</li>
+                        </ol>
                     </div>
                 </div>
             </div>
@@ -598,9 +668,32 @@
         <div class="modal-dialog modal-md">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Processing Payment</h5>
+                    <h5 class="modal-title">Step 3: Processing Payment</h5>
                 </div>
                 <div class="modal-body text-center">
+                    <!-- Step Indicator -->
+                    <div class="step-indicator" style="margin: 0 0 20px 0; font-size: 0.9rem;">
+                        <div class="step completed">
+                            <div class="step-number">1</div>
+                            <span>Grades</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step completed">
+                            <div class="step-number">2</div>
+                            <span>Details</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step active">
+                            <div class="step-number">3</div>
+                            <span>Payment</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <span>Results</span>
+                        </div>
+                    </div>
+                    
                     <div class="spinner mb-3" style="margin: 0 auto;"></div>
                     <h5 id="paymentStatusText">Initiating payment...</h5>
                     <p id="paymentInstructions" class="mt-2">
@@ -609,16 +702,13 @@
                     <div id="paymentSuccess" style="display: none;">
                         <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                         <h5>Payment Successful!</h5>
-                        <p>You can now calculate your cluster points.</p>
-                        <button class="btn btn-success" data-bs-dismiss="modal">
-                            <i class="fas fa-calculator me-2"></i> Start Calculating
-                        </button>
+                        <p>Calculating your cluster points...</p>
                     </div>
                     <div id="paymentError" style="display: none;">
                         <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
                         <h5>Payment Failed</h5>
                         <p id="errorMessage"></p>
-                        <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <button class="btn btn-danger" id="retryPaymentBtn">
                             <i class="fas fa-redo me-2"></i> Try Again
                         </button>
                     </div>
@@ -660,19 +750,26 @@
             </div>
             
             <div class="card-body p-4">
-                <!-- Quick Payment Info Section -->
-                <div class="quick-pay-section" id="quickPaySection">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h5 class="mb-2"><i class="fas fa-bolt me-2" style="color: var(--kuccps-green);"></i>Quick Start</h5>
-                            <p class="mb-0">Pay <strong>Ksh 100 once</strong> to calculate cluster points for all 20 KUCCPS clusters. No registration needed!</p>
-                            <small class="text-muted">Complete payment first, then enter your grades.</small>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <button class="btn btn-register" onclick="startQuickPayment()">
-                                <i class="fas fa-credit-card me-2"></i> Pay Ksh 100 Now
-                            </button>
-                        </div>
+                <!-- Step Indicator -->
+                <div class="step-indicator">
+                    <div class="step active">
+                        <div class="step-number">1</div>
+                        <span>Enter Grades</span>
+                        <div class="step-line"></div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <span>Your Details</span>
+                        <div class="step-line"></div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <span>Payment</span>
+                        <div class="step-line"></div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <span>Results</span>
                     </div>
                 </div>
                 
@@ -695,13 +792,13 @@
                 </div>
                 
                 <!-- Already Paid? Retrieve Results -->
-                <div class="card-header text-white" style="background: linear-gradient(135deg, var(--kuccps-blue) 0%, #0D47A1 100%); margin-top: 20px;">
+                <div class="alert alert-info" style="margin-bottom: 25px;">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h5 class="mb-1">Already Paid? Retrieve Your Results</h5>
-                            <p class="mb-0">Enter your KCSE index and M-Pesa receipt number</p>
+                            <h5 class="mb-1"><i class="fas fa-search me-2"></i>Already Paid? Retrieve Your Results</h5>
+                            <p class="mb-0">Enter your KCSE index and M-Pesa receipt number to view previous results</p>
                         </div>
-                        <button class="btn btn-light" onclick="showRetrieveModal()">
+                        <button class="btn btn-primary" onclick="showRetrieveModal()">
                             <i class="fas fa-search me-2"></i> Retrieve Results
                         </button>
                     </div>
@@ -750,22 +847,9 @@
                     </div>
                 </div>
                 
-                <!-- Payment Required Alert -->
-                <div id="paymentRequiredAlert" class="alert alert-warning" style="display: none; margin-top: 20px;">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Payment Required:</strong> You need to pay Ksh 100 to calculate cluster points.
-                        </div>
-                        <button class="btn btn-sm btn-primary" onclick="startQuickPayment()">
-                            <i class="fas fa-credit-card me-1"></i> Pay Now
-                        </button>
-                    </div>
-                </div>
-                
                 <!-- Grades Form -->
                 <form id="gradesForm">
-                    <h3 class="mb-4"><i class="fas fa-book-open" style="color: var(--kuccps-red);"></i> Enter KCSE Grades</h3>
+                    <h3 class="mb-4"><i class="fas fa-book-open" style="color: var(--kuccps-red);"></i> Step 1: Enter KCSE Grades</h3>
                     
                     <!-- Core Subjects (Group I) -->
                     <div class="subject-category">
@@ -850,7 +934,7 @@
                                         <option value="B-">B- (8 points)</option>
                                         <option value="C+">C+ (7 points)</option>
                                         <option value="C">C (6 points)</option>
-                                        <option value="C-">C- (5 points)</option>
+                                        <option value="C  -">C- (5 points)</option>
                                         <option value="D+">D+ (4 points)</option>
                                         <option value="D">D (3 points)</option>
                                         <option value="D-">D- (2 points)</option>
@@ -1028,7 +1112,7 @@
                         </div>
                     </div>
                     
-                    <!-- Technical Subjects (Group IV) - Keep all your existing technical subject selects -->
+                    <!-- Technical Subjects (Group IV) -->
                     <div class="subject-category">
                         <h4 class="category-title"><i class="fas fa-cogs"></i> Technical Subjects</h4>
                         <div class="row">
@@ -1072,7 +1156,46 @@
                                     </select>
                                 </div>
                             </div>
-                            <!-- Continue with all other technical subjects as in your original code -->
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="arts" class="form-label">Arts:</label>
+                                    <select id="arts" name="arts" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="homescience" class="form-label">Home Science:</label>
+                                    <select id="homescience" name="homescience" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1089,7 +1212,30 @@
                 
                 <!-- Results Section -->
                 <div id="resultsSection" class="results-container" style="display: none;">
-                    <h3 class="results-title"><i class="fas fa-chart-bar me-2" style="color: var(--kuccps-yellow);"></i> Cluster Points Results</h3>
+                    <!-- Step Indicator -->
+                    <div class="step-indicator">
+                        <div class="step completed">
+                            <div class="step-number">1</div>
+                            <span>Grades</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step completed">
+                            <div class="step-number">2</div>
+                            <span>Details</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step completed">
+                            <div class="step-number">3</div>
+                            <span>Payment</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step active">
+                            <div class="step-number">4</div>
+                            <span>Results</span>
+                        </div>
+                    </div>
+                    
+                    <h3 class="results-title"><i class="fas fa-chart-bar me-2" style="color: var(--kuccps-yellow);"></i> Step 4: Your Cluster Points Results</h3>
                     
                     <!-- Summary Alert -->
                     <div class="alert alert-success mb-4" id="summaryAlert">
@@ -1097,6 +1243,7 @@
                             <div class="col-md-6">
                                 <strong><i class="fas fa-info-circle me-2"></i>Calculation Summary</strong>
                                 <div id="aggregateDisplay" class="mt-2"></div>
+                                <div id="userInfoDisplay" class="mt-2 small"></div>
                             </div>
                             <div class="col-md-6">
                                 <strong><i class="fas fa-exclamation-triangle me-2"></i>Important Note</strong>
@@ -1141,6 +1288,9 @@
                         <button class="btn btn-outline-primary" onclick="downloadResults()">
                             <i class="fas fa-download me-2"></i> Download Results as PDF
                         </button>
+                        <button class="btn btn-outline-success ms-2" onclick="window.location.reload()">
+                            <i class="fas fa-redo me-2"></i> Calculate Again
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1162,6 +1312,7 @@
     let checkoutRequestId = null;
     let userData = null;
     let hasPaid = false;
+    let currentGrades = null;
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -1183,7 +1334,6 @@
                 showUserStatusBar(data);
             } else {
                 hasPaid = false;
-                showPaymentRequiredAlert();
             }
         } catch (error) {
             console.log('Not logged in or error checking status');
@@ -1203,97 +1353,222 @@
     function resetForm() {
         document.getElementById('gradesForm').reset();
         document.getElementById('resultsSection').style.display = 'none';
-        document.getElementById('calculateBtn').disabled = !hasPaid;
+        currentGrades = null;
     }
 
-    // Start quick payment process
-    function startQuickPayment() {
-        const modal = new bootstrap.Modal(document.getElementById('registrationModal'));
+    // Show user details modal (Step 2)
+    function showUserDetailsModal() {
+        const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
         modal.show();
-    }
-
-    // Show user status bar
-    function showUserStatusBar(data) {
-        const statusBar = document.getElementById('userStatusBar');
-        const statusText = document.getElementById('userStatusText');
         
-        statusText.innerHTML = `
-            Logged in as: <strong>${data.kcse_index}</strong> | 
-            Email: <strong>${data.email}</strong> | 
-            Payment: <span class="badge bg-success">Completed ✓</span> |
-            Calculations: <strong>${data.calculation_count || 0}</strong>
-        `;
+        // Clear previous entries
+        document.getElementById('user_kcse_index').value = '';
+        document.getElementById('user_email').value = '';
+        document.getElementById('user_phone_number').value = '';
+    }
+
+    // Show payment modal (Step 3)
+    function showPaymentModal() {
+        const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        modal.show();
         
-        statusBar.style.display = 'block';
-        document.getElementById('quickPaySection').style.display = 'none';
-        document.getElementById('paymentRequiredAlert').style.display = 'none';
-        document.getElementById('calculateBtn').disabled = false;
+        // Start payment process
+        startPaymentProcess();
     }
 
-    // Show payment required alert
-    function showPaymentRequiredAlert() {
-        document.getElementById('paymentRequiredAlert').style.display = 'block';
-        document.getElementById('calculateBtn').disabled = true;
-        document.getElementById('userStatusBar').style.display = 'none';
-        document.getElementById('quickPaySection').style.display = 'block';
-    }
-
-    // Check user status
-    async function checkUserStatus() {
-        showLoading(true, 'Checking user status...');
+    // Start payment process
+    async function startPaymentProcess() {
+        const paymentStatusText = document.getElementById('paymentStatusText');
+        const paymentInstructions = document.getElementById('paymentInstructions');
+        const paymentSuccess = document.getElementById('paymentSuccess');
+        const paymentError = document.getElementById('paymentError');
+        
+        paymentStatusText.textContent = 'Initiating payment...';
+        paymentInstructions.textContent = 'Please wait while we process your payment...';
+        paymentSuccess.style.display = 'none';
+        paymentError.style.display = 'none';
+        
         try {
-            const response = await fetch('/my_results', {
-                credentials: 'same-origin'
+            // Get user details from form
+            const kcseIndex = document.getElementById('user_kcse_index').value;
+            const email = document.getElementById('user_email').value;
+            const phoneNumber = document.getElementById('user_phone_number').value;
+            
+            // Register user and initiate payment
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    kcse_index: kcseIndex,
+                    email: email,
+                    phone_number: phoneNumber
+                })
             });
             
             const data = await response.json();
             
             if (data.success) {
-                if (data.payment_status === 'completed') {
-                    hasPaid = true;
-                    showUserStatusBar(data);
+                // Close user details modal
+                const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
+                userDetailsModal.hide();
+                
+                // If local test mode, simulate payment and calculate
+                if (data.local_test_mode) {
+                    paymentStatusText.textContent = 'Local Test Mode - Simulating Payment';
+                    
+                    // Simulate payment success after 2 seconds
+                    setTimeout(async () => {
+                        paymentStatusText.textContent = 'Payment Successful!';
+                        paymentInstructions.style.display = 'none';
+                        paymentSuccess.style.display = 'block';
+                        
+                        // Store user data
+                        userData = {
+                            kcse_index: kcseIndex,
+                            email: email,
+                            user_id: data.user_id
+                        };
+                        
+                        // Calculate points after payment
+                        setTimeout(() => {
+                            const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                            paymentModal.hide();
+                            calculatePointsAfterPayment();
+                        }, 2000);
+                    }, 2000);
+                    return;
+                }
+                
+                // For production: Start checking payment status
+                checkoutRequestId = data.checkout_request_id;
+                paymentStatusText.textContent = 'Payment initiated. Please check your phone...';
+                paymentInstructions.textContent = 'Check your phone for STK Push notification and enter your M-Pesa PIN.';
+                
+                // Store user data for later use
+                userData = {
+                    kcse_index: kcseIndex,
+                    email: email,
+                    user_id: data.user_id,
+                    checkout_request_id: data.checkout_request_id
+                };
+                
+                // Start checking payment status
+                checkPaymentStatus();
+            } else {
+                paymentStatusText.textContent = 'Registration Failed';
+                paymentInstructions.style.display = 'none';
+                paymentError.style.display = 'block';
+                document.getElementById('errorMessage').textContent = data.error || 'Registration failed. Please try again.';
+            }
+        } catch (error) {
+            paymentStatusText.textContent = 'Network Error';
+            paymentInstructions.style.display = 'none';
+            paymentError.style.display = 'block';
+            document.getElementById('errorMessage').textContent = error.message;
+        }
+    }
+
+    // Check payment status
+    async function checkPaymentStatus() {
+        if (!checkoutRequestId) return;
+        
+        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+        const paymentStatusText = document.getElementById('paymentStatusText');
+        const paymentInstructions = document.getElementById('paymentInstructions');
+        const paymentSuccess = document.getElementById('paymentSuccess');
+        const paymentError = document.getElementById('paymentError');
+        
+        paymentCheckInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/check_payment/${checkoutRequestId}`, {
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.status === 'completed') {
+                        clearInterval(paymentCheckInterval);
+                        
+                        // Update payment modal
+                        paymentStatusText.textContent = 'Payment Successful!';
+                        paymentInstructions.style.display = 'none';
+                        paymentSuccess.style.display = 'block';
+                        
+                        // Calculate points after payment
+                        setTimeout(() => {
+                            paymentModal.hide();
+                            calculatePointsAfterPayment();
+                        }, 2000);
+                        
+                    } else if (data.status === 'failed') {
+                        clearInterval(paymentCheckInterval);
+                        paymentStatusText.textContent = 'Payment Failed';
+                        paymentInstructions.style.display = 'none';
+                        paymentError.style.display = 'block';
+                        document.getElementById('errorMessage').textContent = data.error || 'Payment failed. Please try again.';
+                    } else {
+                        // Still pending
+                        paymentInstructions.textContent = 'Please check your phone and enter your M-Pesa PIN to complete payment...';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking payment:', error);
+            }
+        }, 3000); // Check every 3 seconds
+        
+        // Stop checking after 5 minutes
+        setTimeout(() => {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentStatusText.textContent = 'Payment Timeout';
+                paymentInstructions.textContent = 'Payment timed out. Please try again.';
+            }
+        }, 300000); // 5 minutes
+    }
+
+    // Calculate points after payment
+    async function calculatePointsAfterPayment() {
+        showLoading(true, 'Calculating your cluster points...');
+        
+        try {
+            // Get grades from sessionStorage
+            const grades = JSON.parse(sessionStorage.getItem('grades'));
+            
+            // Send grades for calculation
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(grades)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Display results
+                displayResults(data, userData);
+                
+                // Show success message
+                showSuccessMessage(`Results calculated for ${userData.kcse_index}`);
+            } else {
+                if (data.error && (data.error.includes('Payment required') || data.error.includes('Registration required'))) {
+                    alert('Payment verification failed. Please try again.');
+                    showUserDetailsModal();
                 } else {
-                    hasPaid = false;
-                    showPaymentRequiredAlert();
+                    alert('Error calculating points: ' + (data.error || 'Unknown error'));
                 }
             }
         } catch (error) {
-            console.error('Error checking status:', error);
+            alert('Network error: ' + error.message);
+            console.error('Error:', error);
         } finally {
             showLoading(false);
         }
-    }
-
-    // Logout user
-    async function logoutUser() {
-        showLoading(true, 'Logging out...');
-        try {
-            const response = await fetch('/logout', {
-                credentials: 'same-origin'
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                hasPaid = false;
-                location.reload();
-            }
-        } catch (error) {
-            console.error('Error logging out:', error);
-            showLoading(false);
-        }
-    }
-
-    // Show retrieve modal
-    function showRetrieveModal() {
-        const modal = new bootstrap.Modal(document.getElementById('retrieveModal'));
-        modal.show();
-    }
-
-    // Update UI based on user status
-    function updateUI() {
-        const calculateBtn = document.getElementById('calculateBtn');
-        calculateBtn.disabled = !hasPaid;
     }
 
     // Format cluster points with color coding
@@ -1353,15 +1628,25 @@
     }
 
     // Display results
-    function displayResults(data) {
+    function displayResults(data, userInfo) {
         const resultsSection = document.getElementById('resultsSection');
         const clusterGrid = document.getElementById('clusterGrid');
         const aggregateDisplay = document.getElementById('aggregateDisplay');
+        const userInfoDisplay = document.getElementById('userInfoDisplay');
         const topClustersSection = document.getElementById('topClustersSection');
         const topClustersGrid = document.getElementById('topClustersGrid');
         
         // Show results section
         resultsSection.style.display = 'block';
+        
+        // Display user info
+        if (userInfo) {
+            userInfoDisplay.innerHTML = `
+                <div>KCSE Index: <strong>${userInfo.kcse_index}</strong></div>
+                <div>Email: <strong>${userInfo.email}</strong></div>
+                <div>Payment: <span class="badge bg-success">Verified ✓</span></div>
+            `;
+        }
         
         // Display aggregate points
         if (data.aggregate_points) {
@@ -1515,150 +1800,6 @@
         }
     }
 
-    // Handle registration form submission
-    document.getElementById('registrationForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const registerBtn = document.getElementById('registerBtn');
-        const originalText = registerBtn.innerHTML;
-        registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
-        registerBtn.disabled = true;
-        
-        try {
-            const response = await fetch('/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    kcse_index: document.getElementById('kcse_index').value,
-                    email: document.getElementById('email').value,
-                    phone_number: document.getElementById('phone_number').value
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                // Close registration modal
-                const registrationModal = bootstrap.Modal.getInstance(document.getElementById('registrationModal'));
-                registrationModal.hide();
-                
-                // If local test mode or already paid, show success
-                if (data.can_calculate || data.local_test_mode) {
-                    hasPaid = true;
-                    updateUI();
-                    
-                    // Show success message
-                    showSuccessMessage('Payment completed! You can now calculate your cluster points.');
-                    
-                    // Update user status
-                    await checkUserStatus();
-                    
-                    // Focus on form
-                    document.getElementById('gradesForm').scrollIntoView({ behavior: 'smooth' });
-                    setTimeout(() => {
-                        document.getElementById('mathematics').focus();
-                    }, 500);
-                    
-                    return;
-                }
-                
-                // Show payment modal for production
-                checkoutRequestId = data.checkout_request_id;
-                const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
-                paymentModal.show();
-                
-                // Start checking payment status
-                checkPaymentStatus();
-            } else {
-                alert('Registration failed: ' + data.error);
-                registerBtn.innerHTML = originalText;
-                registerBtn.disabled = false;
-            }
-        } catch (error) {
-            alert('Network error: ' + error.message);
-            registerBtn.innerHTML = originalText;
-            registerBtn.disabled = false;
-        }
-    });
-
-    // Check payment status
-    async function checkPaymentStatus() {
-        if (!checkoutRequestId) return;
-        
-        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
-        const paymentStatusText = document.getElementById('paymentStatusText');
-        const paymentInstructions = document.getElementById('paymentInstructions');
-        const paymentSuccess = document.getElementById('paymentSuccess');
-        const paymentError = document.getElementById('paymentError');
-        
-        paymentCheckInterval = setInterval(async () => {
-            try {
-                const response = await fetch(`/check_payment/${checkoutRequestId}`, {
-                    credentials: 'same-origin'
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    if (data.status === 'completed') {
-                        clearInterval(paymentCheckInterval);
-                        
-                        // Update payment modal
-                        paymentStatusText.textContent = 'Payment Successful!';
-                        paymentInstructions.style.display = 'none';
-                        paymentSuccess.style.display = 'block';
-                        
-                        // Update success button
-                        const successBtn = paymentSuccess.querySelector('button');
-                        successBtn.innerHTML = '<i class="fas fa-calculator me-2"></i> Enter Grades Now';
-                        successBtn.onclick = function() {
-                            paymentModal.hide();
-                            hasPaid = true;
-                            updateUI();
-                            
-                            // Scroll to the form
-                            document.getElementById('gradesForm').scrollIntoView({ behavior: 'smooth' });
-                            
-                            // Show success message
-                            showSuccessMessage('Payment confirmed! Please enter your KCSE grades to calculate cluster points.');
-                            
-                            // Update user status
-                            checkUserStatus();
-                            
-                            // Focus on first input field
-                            setTimeout(() => {
-                                document.getElementById('mathematics').focus();
-                            }, 500);
-                        };
-                        
-                    } else if (data.status === 'failed') {
-                        clearInterval(paymentCheckInterval);
-                        paymentStatusText.textContent = 'Payment Failed';
-                        paymentInstructions.style.display = 'none';
-                        paymentError.style.display = 'block';
-                        document.getElementById('errorMessage').textContent = data.error || 'Payment failed. Please try again.';
-                    } else {
-                        // Still pending
-                        paymentInstructions.textContent = 'Please check your phone and enter your M-Pesa PIN to complete payment...';
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking payment:', error);
-            }
-        }, 3000); // Check every 3 seconds
-        
-        // Stop checking after 5 minutes
-        setTimeout(() => {
-            if (paymentCheckInterval) {
-                clearInterval(paymentCheckInterval);
-                paymentStatusText.textContent = 'Payment Timeout';
-                paymentInstructions.textContent = 'Payment timed out. Please try again.';
-            }
-        }, 300000); // 5 minutes
-    }
-
     // Show success message
     function showSuccessMessage(message) {
         // Remove any existing success messages
@@ -1685,6 +1826,106 @@
             }
         }, 5000);
     }
+
+    // Show retrieve modal
+    function showRetrieveModal() {
+        const modal = new bootstrap.Modal(document.getElementById('retrieveModal'));
+        modal.show();
+    }
+
+    // Update UI based on user status
+    function updateUI() {
+        const calculateBtn = document.getElementById('calculateBtn');
+        calculateBtn.disabled = false;
+    }
+
+    // Handle user details form submission
+    document.getElementById('userDetailsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const continueBtn = document.getElementById('continueToPaymentBtn');
+        const originalText = continueBtn.innerHTML;
+        continueBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+        continueBtn.disabled = true;
+        
+        try {
+            // Validate KCSE index format
+            const kcseIndex = document.getElementById('user_kcse_index').value;
+            const indexPattern = /^\d{11}\/\d{4}$/;
+            
+            if (!indexPattern.test(kcseIndex)) {
+                alert('Invalid KCSE index format. Please use: 12345678912/2024');
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                return;
+            }
+            
+            // Validate email
+            const email = document.getElementById('user_email').value;
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!emailPattern.test(email)) {
+                alert('Please enter a valid email address');
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                return;
+            }
+            
+            // Validate phone number
+            const phoneNumber = document.getElementById('user_phone_number').value;
+            const phonePattern = /^(07\d{8}|2547\d{8}|01\d{8})$/;
+            
+            if (!phonePattern.test(phoneNumber)) {
+                alert('Please enter a valid Kenyan phone number (e.g., 0712345678 or 254712345678)');
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                return;
+            }
+            
+            // All validation passed, show payment modal
+            const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
+            userDetailsModal.hide();
+            
+            // Show payment modal
+            setTimeout(() => {
+                showPaymentModal();
+            }, 500);
+            
+        } catch (error) {
+            alert('Error: ' + error.message);
+            continueBtn.innerHTML = originalText;
+            continueBtn.disabled = false;
+        }
+    });
+
+    // Handle grades form submission
+    document.getElementById('gradesForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Collect form data
+        const formData = new FormData(this);
+        const grades = {};
+        
+        // Convert FormData to object
+        formData.forEach((value, key) => {
+            if (value && value !== 'Select Grade') {
+                grades[key] = value.toUpperCase();
+            }
+        });
+        
+        // Check if at least Mathematics and English are filled
+        if (!grades.mathematics || !grades.english) {
+            alert('Please enter grades for at least Mathematics and English.');
+            return;
+        }
+        
+        // Save grades to sessionStorage
+        sessionStorage.setItem('grades', JSON.stringify(grades));
+        currentGrades = grades;
+        
+        // Show user details modal (Step 2)
+        showUserDetailsModal();
+    });
 
     // Handle retrieve form submission
     document.getElementById('retrieveForm').addEventListener('submit', async function(e) {
@@ -1714,22 +1955,16 @@
                 const retrieveModal = bootstrap.Modal.getInstance(document.getElementById('retrieveModal'));
                 retrieveModal.hide();
                 
-                // Set as paid
-                hasPaid = true;
-                updateUI();
+                // Display retrieved results
+                userData = {
+                    kcse_index: data.kcse_index,
+                    email: data.email
+                };
                 
-                // Populate the form with retrieved grades
-                if (data.grades) {
-                    populateFormWithGrades(data.grades);
-                    
-                    // Calculate and display results immediately
-                    setTimeout(() => {
-                        calculateAndDisplayRetrievedResults(data);
-                    }, 500);
-                    
-                    // Show success message
-                    showSuccessMessage(`Results retrieved for ${data.kcse_index}`);
-                }
+                displayResults(data, userData);
+                
+                // Show success message
+                showSuccessMessage(`Results retrieved for ${data.kcse_index}`);
             } else {
                 alert('Error: ' + data.error);
             }
@@ -1741,113 +1976,72 @@
         }
     });
 
-    // Populate form with retrieved grades
-    function populateFormWithGrades(grades) {
-        for (const [subject, grade] of Object.entries(grades)) {
-            const selectElement = document.getElementById(subject);
-            if (selectElement && grade) {
-                selectElement.value = grade;
-            }
-        }
-    }
+    // Handle retry payment button
+    document.getElementById('retryPaymentBtn')?.addEventListener('click', function() {
+        showUserDetailsModal();
+        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+        paymentModal.hide();
+    });
 
-    // Calculate and display retrieved results
-    function calculateAndDisplayRetrievedResults(data) {
-        // Show loading
-        showLoading(true, 'Displaying retrieved results...');
-        
-        // Use the already calculated results from the server
-        if (data.results) {
-            // Create a display-ready data structure
-            const displayData = {
-                results: data.results,
-                aggregate_points: data.aggregate_points,
-                top_7_subjects: data.top_7_subjects,
-                details: {} // We don't have detailed subject breakdown from retrieve
-            };
-            
-            // Display results
-            displayResults(displayData);
-            
-            // Hide loading
-            showLoading(false);
-        }
-    }
-
-    // Handle grades form submission
-    document.getElementById('gradesForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Check if user has paid
-        if (!hasPaid) {
-            alert('Please complete payment first before calculating cluster points.');
-            showPaymentRequiredAlert();
-            return;
-        }
-        
-        // Collect form data
-        const formData = new FormData(this);
-        const grades = {};
-        
-        // Convert FormData to object
-        formData.forEach((value, key) => {
-            if (value && value !== 'Select Grade') {
-                grades[key] = value.toUpperCase();
-            }
-        });
-        
-        // Check if at least Mathematics and English are filled
-        if (!grades.mathematics || !grades.english) {
-            alert('Please enter grades for at least Mathematics and English.');
-            return;
-        }
-        
-        // Show loading spinner
-        showLoading(true, 'Calculating cluster points...');
-        
+    // Check user status
+    async function checkUserStatus() {
+        showLoading(true, 'Checking user status...');
         try {
-            // Send data to backend
-            const response = await fetch('/calculate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify(grades)
+            const response = await fetch('/my_results', {
+                credentials: 'same-origin'
             });
             
             const data = await response.json();
             
             if (data.success) {
-                displayResults(data);
-                
-                // Show warning if not enough subjects
-                if (data.warning) {
-                    const warningAlert = document.createElement('div');
-                    warningAlert.className = 'alert alert-warning mt-3';
-                    warningAlert.innerHTML = `
-                        <i class="fas fa-exclamation-triangle"></i> 
-                        <strong>Note:</strong> ${data.warning}
-                    `;
-                    document.getElementById('resultsSection').prepend(warningAlert);
-                }
-            } else {
-                if (data.error && (data.error.includes('Payment required') || data.error.includes('Registration required'))) {
-                    alert('Payment required. Please complete payment first.');
-                    hasPaid = false;
-                    updateUI();
-                    showPaymentRequiredAlert();
+                if (data.payment_status === 'completed') {
+                    hasPaid = true;
+                    showUserStatusBar(data);
                 } else {
-                    alert('Error calculating points: ' + (data.error || 'Unknown error'));
+                    hasPaid = false;
                 }
             }
         } catch (error) {
-            alert('Network error: ' + error.message);
-            console.error('Error:', error);
+            console.error('Error checking status:', error);
         } finally {
             showLoading(false);
         }
-    });
+    }
+
+    // Logout user
+    async function logoutUser() {
+        showLoading(true, 'Logging out...');
+        try {
+            const response = await fetch('/logout', {
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                hasPaid = false;
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Error logging out:', error);
+            showLoading(false);
+        }
+    }
+
+    // Show user status bar
+    function showUserStatusBar(data) {
+        const statusBar = document.getElementById('userStatusBar');
+        const statusText = document.getElementById('userStatusText');
+        
+        statusText.innerHTML = `
+            Logged in as: <strong>${data.kcse_index}</strong> | 
+            Email: <strong>${data.email}</strong> | 
+            Payment: <span class="badge bg-success">Completed ✓</span> |
+            Calculations: <strong>${data.calculation_count || 0}</strong>
+        `;
+        
+        statusBar.style.display = 'block';
+    }
 
     // Download results as PDF
     function downloadResults() {

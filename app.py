@@ -344,7 +344,7 @@ CLUSTERS = {
     }
 }
 
-# ===== CORRECTED HELPER FUNCTIONS =====
+# ===== HELPER FUNCTIONS =====
 
 def normalize_subject_name(subject):
     """Normalize subject names to match form field names"""
@@ -430,29 +430,15 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
     subjects_used = []
     requirement_failures = []
     
-    if debug:
-        print(f"\n{'='*60}")
-        print(f"Calculating Cluster {cluster_id}: {cluster['name']} - {cluster['description']}")
-        print(f"{'='*60}")
-    
     for req_index, requirement in enumerate(cluster['requirements']):
         req_type = requirement.get('type', 'specific')
         req_subjects = requirement.get('subjects', [])
         req_count = requirement.get('count', 1)
         
-        if debug:
-            print(f"\nRequirement {req_index + 1}: {req_type}")
-            print(f"Subjects options: {req_subjects}")
-            print(f"Need to select: {req_count} subject(s)")
-            print(f"Already used subjects: {[s['subject'] for s in subjects_used]}")
-        
         # Handle special requirements first (Cluster 14 - HAG C+)
         if req_type == 'special' and cluster_id == 14 and req_index == 0:
             # HAG – C+ requirement - best Group III subject with at least C+
             best_group_iii = get_best_subjects_by_group(grades, 'Group III', 1)
-            
-            if debug:
-                print(f"HAG C+ check - Best Group III subjects: {best_group_iii}")
             
             if best_group_iii and best_group_iii[0][1] >= GRADE_POINTS.get('C+', 0):
                 subject, points, grade = best_group_iii[0]
@@ -465,13 +451,7 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                     'group': 'Group III',
                     'requirement_index': req_index + 1
                 })
-                
-                if debug:
-                    print(f"✓ HAG C+ satisfied with {subject} ({grade}) = {points} points")
             else:
-                if debug:
-                    print(f"✗ HAG C+ requirement NOT met")
-                
                 requirement_failures.append(f"Requirement 1: No Group III subject with C+ or better")
                 return 0.000, subjects_used, requirement_failures
             continue
@@ -488,15 +468,10 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
             for subject_option in req_subjects:
                 normalized_option = normalize_subject_name(subject_option)
                 
-                if debug:
-                    print(f"Checking specific subject: {subject_option} -> {normalized_option}")
-                
                 # Check if this specific subject is available
                 if normalized_option in grades and grades[normalized_option]:
                     # Check if subject is already used
                     if normalized_option in considered_subjects:
-                        if debug:
-                            print(f"✗ Subject {normalized_option} already used, skipping")
                         continue
                     
                     points = GRADE_POINTS.get(grades[normalized_option], 0)
@@ -511,18 +486,12 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                     found_points += points
                     considered_subjects.append(normalized_option)
                     
-                    if debug:
-                        print(f"✓ Found specific subject: {normalized_option} ({grades[normalized_option]}) = {points} points")
-                    
                     if len(found_subjects) >= req_count:
                         break
         
         # If not enough specific subjects found, check group requirements
         if len(found_subjects) < req_count and req_type in ['group', 'specific_or_group']:
             for subject_option in req_subjects:
-                if debug:
-                    print(f"Checking group option: {subject_option}")
-                
                 # Handle group patterns
                 if subject_option.startswith('any_group_'):
                     parts = subject_option.split('_')
@@ -535,9 +504,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                                                              req_count - len(found_subjects), 
                                                              considered_subjects)
                         
-                        if debug:
-                            print(f"Available from {group_name}: {available}")
-                        
                         for subject, points, grade in available:
                             found_subjects.append({
                                 'subject': subject,
@@ -549,9 +515,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                             })
                             found_points += points
                             considered_subjects.append(subject)
-                            
-                            if debug:
-                                print(f"✓ Added from group: {subject} ({grade}) = {points} points")
                             
                             if len(found_subjects) >= req_count:
                                 break
@@ -567,9 +530,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                         # Get best subjects from this group
                         all_in_group = get_best_subjects_by_group(grades, group_name, 10, considered_subjects)
                         
-                        if debug:
-                            print(f"All available in {group_name}: {all_in_group}")
-                        
                         if len(all_in_group) >= 2:
                             # Take the 2nd best
                             subject, points, grade = all_in_group[1]
@@ -583,9 +543,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                             })
                             found_points += points
                             considered_subjects.append(subject)
-                            
-                            if debug:
-                                print(f"✓ Added 2nd best: {subject} ({grade}) = {points} points")
                         elif len(all_in_group) == 1:
                             subject, points, grade = all_in_group[0]
                             found_subjects.append({
@@ -598,11 +555,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                             })
                             found_points += points
                             considered_subjects.append(subject)
-                            
-                            if debug:
-                                print(f"✓ Added only available: {subject} ({grade}) = {points} points")
-                        elif debug:
-                            print(f"✗ No subjects available in {group_name}")
                 
                 elif subject_option.startswith('3rd_group_'):
                     parts = subject_option.split('_')
@@ -612,9 +564,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                         
                         # Get best subjects from this group
                         all_in_group = get_best_subjects_by_group(grades, group_name, 10, considered_subjects)
-                        
-                        if debug:
-                            print(f"All available in {group_name}: {all_in_group}")
                         
                         if len(all_in_group) >= 3:
                             # Take the 3rd best
@@ -629,9 +578,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                             })
                             found_points += points
                             considered_subjects.append(subject)
-                            
-                            if debug:
-                                print(f"✓ Added 3rd best: {subject} ({grade}) = {points} points")
                         elif len(all_in_group) == 2:
                             subject, points, grade = all_in_group[1]
                             found_subjects.append({
@@ -644,9 +590,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                             })
                             found_points += points
                             considered_subjects.append(subject)
-                            
-                            if debug:
-                                print(f"✓ Added 2nd best: {subject} ({grade}) = {points} points")
                         elif len(all_in_group) == 1:
                             subject, points, grade = all_in_group[0]
                             found_subjects.append({
@@ -659,11 +602,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
                             })
                             found_points += points
                             considered_subjects.append(subject)
-                            
-                            if debug:
-                                print(f"✓ Added only available: {subject} ({grade}) = {points} points")
-                        elif debug:
-                            print(f"✗ No subjects available in {group_name}")
                 
                 # If we found enough subjects, break the loop
                 if len(found_subjects) >= req_count:
@@ -673,16 +611,7 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
         if len(found_subjects) >= req_count:
             subjects_used.extend(found_subjects)
             cluster_subjects_points += found_points
-            
-            if debug:
-                print(f"✓ Requirement {req_index + 1} satisfied")
-                for subj in found_subjects:
-                    print(f"  - {subj['subject']}: {subj['grade']} = {subj['points']} points")
         else:
-            if debug:
-                print(f"✗ Requirement {req_index + 1} FAILED")
-                print(f"  Needed {req_count} subjects, found {len(found_subjects)}")
-            
             requirement_failures.append(
                 f"Requirement {req_index + 1}: Could not satisfy {req_subjects}"
             )
@@ -692,10 +621,6 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
     expected_count = 4
     
     if len(subjects_used) != expected_count:
-        if debug:
-            print(f"✗ Wrong number of subjects: {len(subjects_used)} instead of {expected_count}")
-            print(f"  Subjects used: {[s['subject'] for s in subjects_used]}")
-        
         requirement_failures.append(f"Wrong number of subjects: {len(subjects_used)} instead of {expected_count}")
         return 0.000, subjects_used, requirement_failures
     
@@ -706,24 +631,7 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
     x = cluster_subjects_points
     y = aggregate_points
     
-    if debug:
-        print(f"\n{'='*60}")
-        print(f"CLUSTER {cluster_id} CALCULATION")
-        print(f"{'='*60}")
-        print(f"Subjects used for cluster (x):")
-        total_cluster_points = 0
-        for subj in subjects_used:
-            print(f"  - {subj['subject']}: {subj['grade']} = {subj['points']} points (Req {subj['requirement_index']})")
-            total_cluster_points += subj['points']
-        print(f"  Total cluster points (x): {total_cluster_points}")
-        print(f"\nAggregate points (y) - Top 7 subjects:")
-        for subject, points in top_7_subjects:
-            print(f"  - {subject}: {points} points")
-        print(f"  Total aggregate points (y): {aggregate_points}")
-    
     if x <= 0 or y <= 0:
-        if debug:
-            print(f"✗ Invalid points: x={x}, y={y}")
         requirement_failures.append(f"Invalid points calculation: x={x}, y={y}")
         return 0.000, subjects_used, requirement_failures
     
@@ -741,19 +649,8 @@ def calculate_cluster_points(grades, cluster_id, debug=False):
         cluster_points = round(cluster_points, 3)
         cluster_points_with_deviation = round(cluster_points_with_deviation, 3)
         
-        if debug:
-            print(f"\nFormula: sqrt(({x}/48) × ({y}/84)) × 48")
-            print(f"Calculation: sqrt(({x/48:.4f}) × ({y/84:.4f})) × 48")
-            print(f"Intermediate: sqrt({(x/48)*(y/84):.6f}) × 48")
-            print(f"Result: sqrt({(x/48)*(y/84):.6f}) = {math.sqrt((x/48)*(y/84)):.4f}")
-            print(f"Final cluster points: {math.sqrt((x/48)*(y/84)):.4f} × 48 = {cluster_points}")
-            print(f"After -3 deviation: {cluster_points} - 3 = {cluster_points_with_deviation}")
-            print(f"{'='*60}")
-        
         return cluster_points_with_deviation, subjects_used, []
     except Exception as e:
-        if debug:
-            print(f"✗ Error in calculation: {e}")
         requirement_failures.append(f"Calculation error: {str(e)}")
         return 0.000, subjects_used, requirement_failures
 
@@ -864,293 +761,6 @@ def initiate_stk_push(phone_number, amount, account_reference, transaction_desc)
         traceback.print_exc()
         raise
 
-# ===== PDF GENERATION FUNCTIONS =====
-
-def generate_results_pdf(user_data, calculation_data, result_id):
-    """
-    Generate a PDF report for the calculation results
-    """
-    try:
-        # Create a BytesIO buffer for the PDF
-        buffer = io.BytesIO()
-        
-        # Create the PDF document
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=A4,
-            rightMargin=72,
-            leftMargin=72,
-            topMargin=72,
-            bottomMargin=72
-        )
-        
-        # Container for the 'Flowable' objects
-        elements = []
-        
-        # Get styles
-        styles = getSampleStyleSheet()
-        
-        # Title
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=18,
-            alignment=1,  # Center
-            spaceAfter=30,
-            textColor=colors.HexColor('#2c3e50')
-        )
-        
-        elements.append(Paragraph("KCSE Cluster Points Calculator Results", title_style))
-        elements.append(Spacer(1, 20))
-        
-        # User Information
-        info_style = ParagraphStyle(
-            'InfoStyle',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.HexColor('#34495e')
-        )
-        
-        user_info = [
-            ["Student Information", ""],
-            ["KCSE Index:", user_data.get('kcse_index', 'N/A')],
-            ["Email:", user_data.get('email', 'N/A')],
-            ["Phone:", user_data.get('phone_number', 'N/A')],
-            ["Calculation Date:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-            ["Result ID:", result_id],
-            ["Payment Status:", "Verified" if user_data.get('payment_status') == 'completed' else "Pending"]
-        ]
-        
-        user_table = Table(user_info, colWidths=[150, 300])
-        user_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498db')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#ecf0f1')),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        elements.append(user_table)
-        elements.append(Spacer(1, 30))
-        
-        # Aggregate Points Summary
-        agg_style = ParagraphStyle(
-            'AggStyle',
-            parent=styles['Heading2'],
-            fontSize=14,
-            textColor=colors.HexColor('#27ae60'),
-            spaceAfter=10
-        )
-        
-        elements.append(Paragraph("Aggregate Points Summary", agg_style))
-        
-        agg_info = [
-            ["Total Aggregate Points:", f"{calculation_data.get('aggregate_points', 0)}/84"],
-            ["Best 7 Subjects Used:", ""]
-        ]
-        
-        # Add top 7 subjects
-        for i, subject in enumerate(calculation_data.get('top_7_subjects', [])):
-            subject_name = subject.get('subject', '').title()
-            subject_points = subject.get('points', 0)
-            agg_info.append([f"{i+1}. {subject_name}", f"{subject_points} points"])
-        
-        agg_table = Table(agg_info, colWidths=[250, 200])
-        agg_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2ecc71')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#27ae60')),
-            ('TEXTCOLOR', (0, 1), (-1, 1), colors.white),
-            ('BACKGROUND', (0, 2), (-1, -1), colors.HexColor('#d5f4e6')),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        
-        elements.append(agg_table)
-        elements.append(Spacer(1, 30))
-        
-        # Cluster Points Results
-        cluster_style = ParagraphStyle(
-            'ClusterStyle',
-            parent=styles['Heading2'],
-            fontSize=14,
-            textColor=colors.HexColor('#e74c3c'),
-            spaceAfter=10
-        )
-        
-        elements.append(Paragraph("Cluster Points Results", cluster_style))
-        
-        # Create cluster results table
-        cluster_results = calculation_data.get('results', {})
-        cluster_table_data = [["Cluster", "Description", "Points"]]
-        
-        for cluster_num in range(1, 21):
-            cluster_key = f'Cluster {cluster_num}'
-            if cluster_key in cluster_results:
-                cluster_desc = CLUSTERS.get(cluster_num, {}).get('description', '')
-                cluster_points = cluster_results[cluster_key]
-                cluster_table_data.append([cluster_key, cluster_desc, cluster_points])
-        
-        cluster_table = Table(cluster_table_data, colWidths=[100, 250, 100])
-        cluster_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e74c3c')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('ALIGN', (2, 1), (2, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#fadbd8')),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9ebea')]),
-        ]))
-        
-        elements.append(cluster_table)
-        elements.append(Spacer(1, 30))
-        
-        # Calculation Formula
-        formula_style = ParagraphStyle(
-            'FormulaStyle',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.HexColor('#7f8c8d'),
-            alignment=1,  # Center
-            spaceBefore=20,
-            spaceAfter=20
-        )
-        
-        elements.append(Paragraph("Calculation Formula: √((x/48) × (y/84)) × 48 - 3", formula_style))
-        elements.append(Paragraph("Where: x = sum of 4 cluster subjects, y = aggregate points (best 7 subjects)", formula_style))
-        elements.append(Spacer(1, 20))
-        
-        # Footer
-        footer_style = ParagraphStyle(
-            'FooterStyle',
-            parent=styles['Normal'],
-            fontSize=8,
-            textColor=colors.HexColor('#95a5a6'),
-            alignment=1,  # Center
-            spaceBefore=20
-        )
-        
-        elements.append(Paragraph("Generated by KCSE Cluster Points Calculator", footer_style))
-        elements.append(Paragraph(f"Document ID: {result_id}", footer_style))
-        elements.append(Paragraph("This document is valid for university placement reference", footer_style))
-        
-        # Build PDF
-        doc.build(elements)
-        
-        # Get PDF data
-        pdf_data = buffer.getvalue()
-        buffer.close()
-        
-        return pdf_data
-        
-    except Exception as e:
-        print(f"❌ PDF generation error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise
-
-def save_pdf_to_database(user_id, result_id, pdf_data, filename):
-    """Save PDF to MongoDB"""
-    try:
-        pdf_record = {
-            'pdf_id': str(uuid.uuid4()),
-            'user_id': user_id,
-            'result_id': result_id,
-            'filename': filename,
-            'pdf_data': pdf_data,
-            'created_at': datetime.now(),
-            'download_count': 0
-        }
-        
-        pdfs_collection.insert_one(pdf_record)
-        print(f"✅ PDF saved to database: {filename}")
-        
-        return pdf_record['pdf_id']
-        
-    except Exception as e:
-        print(f"❌ PDF save error: {str(e)}")
-        raise
-
-# ===== SIMULATED CALLBACK FOR LOCAL TESTING =====
-
-def simulate_mpesa_callback(checkout_request_id, user_id, success=True):
-    """Simulate M-Pesa callback for local testing"""
-    try:
-        print(f"🎭 Simulating callback for {checkout_request_id}...")
-        
-        # Find payment record
-        payment_record = payments_collection.find_one({
-            'mpesa_request_id': checkout_request_id
-        })
-        
-        if not payment_record:
-            print(f"❌ Payment record not found for simulation")
-            return False
-        
-        if success:
-            # Simulate successful payment
-            payment_update = {
-                'status': 'completed',
-                'result_code': 0,
-                'result_desc': 'Success (Simulated for Local Testing)',
-                'mpesa_receipt': f'TEST{random.randint(100000, 999999)}',
-                'transaction_date': datetime.now().strftime('%Y%m%d%H%M%S'),
-                'phone_number': payment_record.get('phone_number', '2547xxxxxxxx'),
-                'amount': PAYMENT_AMOUNT,
-                'updated_at': datetime.now()
-            }
-        else:
-            # Simulate failed payment
-            payment_update = {
-                'status': 'failed',
-                'result_code': 1,
-                'result_desc': 'User cancelled (Simulated)',
-                'updated_at': datetime.now()
-            }
-        
-        # Update payment record
-        payments_collection.update_one(
-            {'mpesa_request_id': checkout_request_id},
-            {'$set': payment_update}
-        )
-        
-        # Update user status
-        if success:
-            users_collection.update_one(
-                {'user_id': user_id},
-                {'$set': {
-                    'payment_status': 'completed',
-                    'payment_date': datetime.now(),
-                    'updated_at': datetime.now()
-                }}
-            )
-        else:
-            users_collection.update_one(
-                {'user_id': user_id},
-                {'$set': {
-                    'payment_status': 'failed',
-                    'updated_at': datetime.now()
-                }}
-            )
-        
-        print(f"✅ Payment simulation complete!")
-        return True
-    except Exception as e:
-        print(f"❌ Payment simulation error: {str(e)}")
-        return False
-
 # ===== ROUTES =====
 
 @app.route('/')
@@ -1217,25 +827,40 @@ def register():
                     'already_paid': True
                 })
             else:
-                return jsonify({
-                    'success': False,
-                    'error': 'User exists but payment not completed'
-                }), 400
+                # Update user with new phone number if changed
+                users_collection.update_one(
+                    {'user_id': existing_user['user_id']},
+                    {'$set': {
+                        'phone_number': formatted_phone,
+                        'updated_at': datetime.now()
+                    }}
+                )
+                
+                # Store in session
+                session['user_id'] = existing_user['user_id']
+                session['kcse_index'] = kcse_index
+                session['email'] = email
         
-        # Create user record
-        user_id = str(uuid.uuid4())
-        user_data = {
-            'user_id': user_id,
-            'kcse_index': kcse_index,
-            'email': email,
-            'phone_number': formatted_phone,
-            'created_at': datetime.now(),
-            'payment_status': 'pending',
-            'last_login': datetime.now()
-        }
-        
-        users_collection.insert_one(user_data)
-        print(f"✅ User created: {user_id}")
+        else:
+            # Create new user record
+            user_id = str(uuid.uuid4())
+            user_data = {
+                'user_id': user_id,
+                'kcse_index': kcse_index,
+                'email': email,
+                'phone_number': formatted_phone,
+                'created_at': datetime.now(),
+                'payment_status': 'pending',
+                'last_login': datetime.now()
+            }
+            
+            users_collection.insert_one(user_data)
+            print(f"✅ User created: {user_id}")
+            
+            # Store in session
+            session['user_id'] = user_id
+            session['kcse_index'] = kcse_index
+            session['email'] = email
         
         # Check if we're running locally for testing
         is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
@@ -1244,18 +869,18 @@ def register():
             print(f"🌐 LOCALHOST DETECTED - Using simulation mode")
             
             # Create a simulated checkout request ID
-            checkout_request_id = f'LOCAL_TEST_{user_id}_{int(datetime.now().timestamp())}'
+            checkout_request_id = f'LOCAL_TEST_{session["user_id"]}_{int(datetime.now().timestamp())}'
             
             # Save simulated payment record
             transaction_id = str(uuid.uuid4())
             payment_data = {
                 'transaction_id': transaction_id,
-                'user_id': user_id,
+                'user_id': session['user_id'],
                 'kcse_index': kcse_index,
                 'phone_number': formatted_phone,
                 'amount': PAYMENT_AMOUNT,
                 'mpesa_request_id': checkout_request_id,
-                'merchant_request_id': f'LOCAL_MERCHANT_{user_id}',
+                'merchant_request_id': f'LOCAL_MERCHANT_{session["user_id"]}',
                 'status': 'pending',
                 'created_at': datetime.now(),
                 'updated_at': datetime.now()
@@ -1265,29 +890,59 @@ def register():
             
             # Update user with checkout request ID
             users_collection.update_one(
-                {'user_id': user_id},
+                {'user_id': session['user_id']},
                 {'$set': {
                     'checkout_request_id': checkout_request_id,
                     'updated_at': datetime.now()
                 }}
             )
             
-            # Store in session
-            session['user_id'] = user_id
-            session['kcse_index'] = kcse_index
-            session['email'] = email
             session['checkout_request_id'] = checkout_request_id
             
             # Automatically simulate successful payment for local testing
-            simulate_mpesa_callback(checkout_request_id, user_id, success=True)
+            # Simulate payment callback after 1 second
+            def simulate_callback():
+                payment_update = {
+                    'status': 'completed',
+                    'result_code': 0,
+                    'result_desc': 'Success (Simulated for Local Testing)',
+                    'mpesa_receipt': f'TEST{random.randint(100000, 999999)}',
+                    'transaction_date': datetime.now().strftime('%Y%m%d%H%M%S'),
+                    'phone_number': formatted_phone,
+                    'amount': PAYMENT_AMOUNT,
+                    'updated_at': datetime.now()
+                }
+                
+                # Update payment record
+                payments_collection.update_one(
+                    {'mpesa_request_id': checkout_request_id},
+                    {'$set': payment_update}
+                )
+                
+                # Update user status
+                users_collection.update_one(
+                    {'user_id': session['user_id']},
+                    {'$set': {
+                        'payment_status': 'completed',
+                        'payment_date': datetime.now(),
+                        'payment_receipt': payment_update['mpesa_receipt'],
+                        'updated_at': datetime.now()
+                    }}
+                )
+                
+                print(f"✅ Payment simulated successfully!")
+            
+            # Run simulation in background
+            import threading
+            timer = threading.Timer(1.0, simulate_callback)
+            timer.start()
             
             return jsonify({
                 'success': True,
-                'message': 'Registration successful (LOCAL TEST MODE - Payment automatically simulated)',
-                'user_id': user_id,
+                'message': 'Registration successful (LOCAL TEST MODE - Payment will be simulated)',
+                'user_id': session['user_id'],
                 'checkout_request_id': checkout_request_id,
-                'local_test_mode': True,
-                'can_calculate': True
+                'local_test_mode': True
             })
         
         # PRODUCTION: Initiate actual M-Pesa payment
@@ -1305,7 +960,7 @@ def register():
                 transaction_id = str(uuid.uuid4())
                 payment_data = {
                     'transaction_id': transaction_id,
-                    'user_id': user_id,
+                    'user_id': session['user_id'],
                     'kcse_index': kcse_index,
                     'phone_number': formatted_phone,
                     'amount': PAYMENT_AMOUNT,
@@ -1321,23 +976,19 @@ def register():
                 
                 # Update user with checkout request ID
                 users_collection.update_one(
-                    {'user_id': user_id},
+                    {'user_id': session['user_id']},
                     {'$set': {
                         'checkout_request_id': payment_response.get('CheckoutRequestID'),
                         'updated_at': datetime.now()
                     }}
                 )
                 
-                # Store in session
-                session['user_id'] = user_id
-                session['kcse_index'] = kcse_index
-                session['email'] = email
                 session['checkout_request_id'] = payment_response.get('CheckoutRequestID')
                 
                 return jsonify({
                     'success': True,
                     'message': 'Payment initiated successfully',
-                    'user_id': user_id,
+                    'user_id': session['user_id'],
                     'checkout_request_id': payment_response.get('CheckoutRequestID'),
                     'merchant_request_id': payment_response.get('MerchantRequestID'),
                     'response_description': payment_response.get('ResponseDescription')
@@ -1391,6 +1042,7 @@ def check_payment(checkout_request_id):
                 {'$set': {
                     'payment_status': 'completed',
                     'payment_date': datetime.now(),
+                    'payment_receipt': payment_record.get('mpesa_receipt', ''),
                     'updated_at': datetime.now()
                 }}
             )
@@ -1594,38 +1246,14 @@ def calculate():
         else:
             data = request.form.to_dict()
         
-        # Check if this is a payment check request
-        if data.get('action') == 'check_payment':
-            # Check if user has paid
-            if 'user_id' in session:
-                user = users_collection.find_one({'user_id': session['user_id']})
-                if user and user.get('payment_status') == 'completed':
-                    return jsonify({
-                        'success': True,
-                        'payment_status': 'completed',
-                        'message': 'Payment verified'
-                    })
-                else:
-                    return jsonify({
-                        'success': False,
-                        'payment_status': 'pending',
-                        'message': 'Payment required'
-                    })
-            else:
-                return jsonify({
-                    'success': False,
-                    'payment_status': 'not_registered',
-                    'message': 'Registration required'
-                })
-        
-        # If this is a calculation request without payment, redirect to payment
+        # Check if user is logged in and has paid
         if 'user_id' not in session:
             return jsonify({
                 'success': False,
-                'error': 'Registration required',
+                'error': 'Payment required. Please register and pay first.',
                 'redirect': True,
-                'redirect_url': '/payment'
-            }), 402
+                'redirect_url': '/'
+            }), 402  # Payment Required
         
         user_id = session['user_id']
         
@@ -1636,7 +1264,7 @@ def calculate():
                 'success': False,
                 'error': 'Payment required. Please complete payment first.',
                 'redirect': True,
-                'redirect_url': '/payment'
+                'redirect_url': '/'
             }), 402  # Payment Required
         
         # Process calculation (only if paid)
@@ -1663,7 +1291,9 @@ def calculate():
                     grades[field] = None
         
         # Log all grades received
+        print(f"📊 Calculating for user: {user_id}")
         print(f"Subjects with grades: {subjects_with_grades}")
+        print(f"Grades received: {grades}")
         
         # Calculate points for all clusters
         results = {}
@@ -1695,10 +1325,15 @@ def calculate():
             'aggregate_points': aggregate_points,
             'top_7_subjects': [{'subject': s, 'points': p} for s, p in top_7_subjects],
             'calculated_at': datetime.now(),
-            'payment_status': 'verified'
+            'payment_status': 'verified',
+            'mpesa_receipt': user.get('payment_receipt', 'N/A')
         }
         
         results_collection.insert_one(result_data)
+        
+        print(f"✅ Calculation complete for user: {user_id}")
+        print(f"Result ID: {result_id}")
+        print(f"Aggregate Points: {aggregate_points}")
         
         return jsonify({
             'success': True,
@@ -1713,11 +1348,15 @@ def calculate():
             'warning': 'At least 7 subjects needed for accurate calculation' if subjects_with_grades < 7 else None,
             'result_id': result_id,
             'payment_verified': True,
-            'mpesa_receipt': user.get('payment_receipt', 'N/A')
+            'mpesa_receipt': user.get('payment_receipt', 'N/A'),
+            'user_info': {
+                'kcse_index': session.get('kcse_index'),
+                'email': session.get('email')
+            }
         })
         
     except Exception as e:
-        print(f"ERROR in calculate: {str(e)}")
+        print(f"❌ ERROR in calculate: {str(e)}")
         import traceback
         traceback.print_exc()
         
@@ -1725,273 +1364,6 @@ def calculate():
             'success': False,
             'error': str(e)
         }), 500
-# ===== PDF DOWNLOAD ENDPOINTS =====
-
-@app.route('/download_pdf/<result_id>')
-def download_pdf(result_id):
-    """Download PDF for a specific result"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        # Find the PDF in database
-        pdf_record = pdfs_collection.find_one({
-            'result_id': result_id,
-            'user_id': session['user_id']
-        })
-        
-        if not pdf_record:
-            return jsonify({'success': False, 'error': 'PDF not found'}), 404
-        
-        # Increment download count
-        pdfs_collection.update_one(
-            {'_id': pdf_record['_id']},
-            {'$inc': {'download_count': 1}}
-        )
-        
-        # Create response with PDF data
-        response = send_file(
-            io.BytesIO(pdf_record['pdf_data']),
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=pdf_record['filename']
-        )
-        
-        return response
-        
-    except Exception as e:
-        print(f"❌ PDF download error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/generate_pdf/<result_id>', methods=['POST'])
-def generate_pdf(result_id):
-    """Generate PDF for an existing result"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        # Find the result
-        result = results_collection.find_one({
-            'result_id': result_id,
-            'user_id': session['user_id']
-        })
-        
-        if not result:
-            return jsonify({'success': False, 'error': 'Result not found'}), 404
-        
-        # Find user data
-        user = users_collection.find_one({'user_id': session['user_id']})
-        
-        if not user:
-            return jsonify({'success': False, 'error': 'User not found'}), 404
-        
-        # Check if PDF already exists
-        existing_pdf = pdfs_collection.find_one({'result_id': result_id})
-        if existing_pdf:
-            # Delete old PDF
-            pdfs_collection.delete_one({'_id': existing_pdf['_id']})
-        
-        # Generate PDF
-        calculation_data = {
-            'results': result.get('results', {}),
-            'aggregate_points': result.get('aggregate_points', 0),
-            'top_7_subjects': result.get('top_7_subjects', [])
-        }
-        
-        pdf_filename = f"KCSE_Results_{user.get('kcse_index', 'N/A').replace('/', '_')}_{result_id}.pdf"
-        pdf_data = generate_results_pdf(user, calculation_data, result_id)
-        
-        # Save PDF to database
-        pdf_id = save_pdf_to_database(session['user_id'], result_id, pdf_data, pdf_filename)
-        
-        return jsonify({
-            'success': True,
-            'message': 'PDF generated successfully',
-            'pdf_id': pdf_id,
-            'result_id': result_id,
-            'filename': pdf_filename,
-            'download_url': f'/download_pdf/{result_id}'
-        })
-        
-    except Exception as e:
-        print(f"❌ PDF generation error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/my_pdfs')
-def my_pdfs():
-    """Get list of user's PDFs"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        # Get user's PDFs
-        user_pdfs = list(pdfs_collection.find(
-            {'user_id': session['user_id']},
-            sort=[('created_at', -1)]
-        ))
-        
-        pdfs_list = []
-        for pdf in user_pdfs:
-            # Get associated result
-            result = results_collection.find_one({'result_id': pdf.get('result_id')})
-            
-            pdfs_list.append({
-                'pdf_id': pdf.get('pdf_id'),
-                'result_id': pdf.get('result_id'),
-                'filename': pdf.get('filename'),
-                'created_at': pdf.get('created_at', datetime.now()).isoformat(),
-                'download_count': pdf.get('download_count', 0),
-                'result_date': result.get('calculated_at', datetime.now()).isoformat() if result else None,
-                'aggregate_points': result.get('aggregate_points', 0) if result else 0,
-                'download_url': f'/download_pdf/{pdf.get("result_id")}'
-            })
-        
-        return jsonify({
-            'success': True,
-            'pdfs': pdfs_list,
-            'count': len(pdfs_list)
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-# ===== TESTING ENDPOINTS =====
-
-@app.route('/test/simulate_payment', methods=['POST'])
-def test_simulate_payment():
-    """Simulate payment for testing (local only)"""
-    try:
-        is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
-        if not is_local:
-            return jsonify({'success': False, 'error': 'This endpoint is for local testing only'}), 403
-        
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        data = request.json
-        checkout_request_id = data.get('checkout_request_id', session.get('checkout_request_id'))
-        success = data.get('success', True)
-        
-        if not checkout_request_id:
-            return jsonify({'success': False, 'error': 'No checkout request ID'}), 400
-        
-        print(f"🧪 Manually simulating payment for testing...")
-        result = simulate_mpesa_callback(checkout_request_id, session['user_id'], success)
-        
-        if result:
-            return jsonify({
-                'success': True,
-                'message': f'Payment simulated {"successfully" if success else "failed"}',
-                'checkout_request_id': checkout_request_id,
-                'can_calculate': success
-            })
-        else:
-            return jsonify({'success': False, 'error': 'Failed to simulate payment'}), 500
-            
-    except Exception as e:
-        print(f"❌ Test payment simulation error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/test/bypass')
-def test_bypass():
-    """Bypass payment for testing (local only)"""
-    try:
-        is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
-        if not is_local:
-            return jsonify({'success': False, 'error': 'This endpoint is for local testing only'}), 403
-        
-        # Create or use existing session
-        if 'user_id' not in session:
-            user_id = 'test_user_' + str(random.randint(1000, 9999))
-            session['user_id'] = user_id
-            session['kcse_index'] = '12345678901/2024'
-            session['email'] = 'test@example.com'
-            session['checkout_request_id'] = 'TEST_' + str(random.randint(10000, 99999))
-        
-        # Mark as paid
-        users_collection.update_one(
-            {'user_id': session['user_id']},
-            {'$set': {
-                'payment_status': 'completed',
-                'payment_date': datetime.now(),
-                'updated_at': datetime.now()
-            }},
-            upsert=True
-        )
-        
-        return jsonify({
-            'success': True,
-            'message': 'Payment bypassed for testing',
-            'user_id': session['user_id'],
-            'kcse_index': session['kcse_index'],
-            'can_calculate': True
-        })
-        
-    except Exception as e:
-        print(f"❌ Test bypass error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/debug')
-def debug():
-    """Debug endpoint to test the system with example data"""
-    # Example test data
-    test_grades = {
-        'mathematics': 'A',        # 12
-        'english': 'B+',          # 10
-        'kiswahili': 'B',         # 9
-        'physics': 'A-',          # 11
-        'chemistry': 'B+',        # 10
-        'biology': 'B',           # 9
-        'history': 'C+',          # 7
-        'computer': 'A',          # 12
-    }
-    
-    # Calculate expected aggregate
-    aggregate_points, top_7 = get_aggregate_points(test_grades)
-    
-    return jsonify({
-        'test_data': test_grades,
-        'expected_aggregate': {
-            'points': aggregate_points,
-            'calculation': '12 (Math) + 12 (Computer) + 11 (Physics) + 10 (English) + 10 (Chemistry) + 9 (Kiswahili) + 9 (Biology) = 73',
-            'top_7_subjects': [{'subject': s, 'points': p} for s, p in top_7]
-        },
-        'note': 'Test data matches your example: Aggregate should be 73/84',
-        'deviation_note': 'All cluster points will have -3 deviation applied',
-        'endpoints': {
-            'calculate': '/calculate (POST with JSON)',
-            'home': '/'
-        }
-    })
-
-@app.route('/test_formula')
-def test_formula():
-    """Test the formula with specific values and deviation"""
-    # Example: x = 40, y = 70
-    x = 40
-    y = 70
-    
-    # Calculate using formula
-    result = math.sqrt((x / 48.0) * (y / 84.0)) * 48.0
-    result_with_deviation = max(0.000, result - 3.0)
-    result = round(result, 3)
-    result_with_deviation = round(result_with_deviation, 3)
-    
-    return jsonify({
-        'formula': '√((x/48) × (y/84)) × 48 - 3',
-        'x': x,
-        'y': y,
-        'calculation': f'√(({x}/48) × ({y}/84)) × 48',
-        'step1': f'x/48 = {x}/48 = {x/48:.4f}',
-        'step2': f'y/84 = {y}/84 = {y/84:.4f}',
-        'step3': f'(x/48) × (y/84) = {(x/48)*(y/84):.6f}',
-        'step4': f'√((x/48) × (y/84)) = {math.sqrt((x/48)*(y/84)):.4f}',
-        'step5': f'√((x/48) × (y/84)) × 48 = {result}',
-        'step6': f'After -3 deviation: {result} - 3 = {result_with_deviation}',
-        'original_result': result,
-        'result_with_deviation': result_with_deviation,
-        'deviation_applied': -3
-    })
 
 @app.route('/retrieve_results', methods=['POST'])
 def retrieve_results():
@@ -2050,31 +1422,20 @@ def retrieve_results():
             'success': True,
             'message': 'Results retrieved successfully',
             'kcse_index': kcse_index,
+            'email': user.get('email', ''),
             'user_id': user_id,
             'grades': latest_result.get('grades', {}),
             'results': latest_result.get('results', {}),
             'aggregate_points': latest_result.get('aggregate_points', 0),
             'top_7_subjects': latest_result.get('top_7_subjects', []),
-            'calculated_at': latest_result.get('calculated_at').isoformat() if latest_result.get('calculated_at') else None
+            'calculated_at': latest_result.get('calculated_at').isoformat() if latest_result.get('calculated_at') else None,
+            'payment_verified': True,
+            'mpesa_receipt': mpesa_receipt
         })
         
     except Exception as e:
         print(f"❌ Retrieve results error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-    
-@app.route('/check_auto_calculate')
-def check_auto_calculate():
-    """Check if user should auto-calculate after payment"""
-    if 'user_id' in session and session.get('auto_calculate'):
-        session.pop('auto_calculate', None)
-        return jsonify({
-            'success': True,
-            'auto_calculate': True,
-            'user_id': session.get('user_id'),
-            'kcse_index': session.get('kcse_index')
-        })
-    return jsonify({'success': False, 'auto_calculate': False})
-
 
 @app.route('/health')
 def health():
@@ -2108,21 +1469,25 @@ if __name__ == '__main__':
     print(f"Callback URL: {MPESA_CONFIG['callback_url']}")
     print(f"Payment Amount: Ksh {PAYMENT_AMOUNT}")
     print("=" * 60)
-    print("\n📍 CORRECTED FEATURES:")
-    print("   1. Fixed group counting logic (any_group_iii, 2nd_group_iii, etc.)")
-    print("   2. Corrected subject reuse prevention within same cluster")
-    print("   3. Improved debugging output with requirement tracking")
-    print("   4. Better handling of 2nd/3rd group requirements")
-    print("   5. All routes preserved and functional")
+    print("\n📍 NEW FLOW:")
+    print("   Step 1: User enters KCSE grades")
+    print("   Step 2: User enters index, email, phone")
+    print("   Step 3: Payment (Ksh 100 via M-Pesa)")
+    print("   Step 4: Automatic calculation and results display")
+    print("=" * 60)
+    print("\n📍 DATA STORED IN MONGODB:")
+    print("   1. Users collection: email, index, phone, payment status")
+    print("   2. Payments collection: M-Pesa receipt, amount, status")
+    print("   3. Results collection: grades, cluster points, aggregate")
+    print("   4. PDFs collection: Generated PDF reports")
     print("=" * 60)
     print("\n📍 ENDPOINTS:")
-    print("   /                 - Home page")
+    print("   /                 - Home page with 4-step flow")
     print("   /register         - User registration & payment")
-    print("   /calculate        - Calculate cluster points")
+    print("   /calculate        - Calculate cluster points (after payment)")
+    print("   /check_payment/   - Check payment status")
+    print("   /retrieve_results - Retrieve results with index & receipt")
     print("   /my_results       - View calculation history")
-    print("   /my_pdfs          - View PDF history")
-    print("   /download_pdf/... - Download PDF")
-    print("   /generate_pdf/... - Generate new PDF")
     print("   /logout           - Logout user")
     print("   /health           - System health check")
     print("=" * 60)
