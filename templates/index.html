@@ -503,13 +503,21 @@
             margin: 15px 0;
             border-left: 4px solid var(--kuccps-green);
         }
+        
+        .quick-pay-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #dee2e6;
+        }
     </style>
 </head>
 <body>
     <!-- Loading Spinner -->
     <div id="loadingSpinner" class="loading-spinner">
         <div class="spinner"></div>
-        <div class="mt-3" style="color: var(--kuccps-red); font-weight: 700;">Calculating cluster points...</div>
+        <div class="mt-3" style="color: var(--kuccps-red); font-weight: 700;" id="loadingText">Loading...</div>
     </div>
 
     <!-- Registration Modal -->
@@ -652,69 +660,104 @@
             </div>
             
             <div class="card-body p-4">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, var(--kuccps-blue) 0%, #0D47A1 100%);">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="mb-1">Already Paid? Retrieve Your Results</h5>
-            <p class="mb-0">Enter your KCSE index and M-Pesa receipt number</p>
-        </div>
-        <button class="btn btn-light" onclick="showRetrieveModal()">
-            <i class="fas fa-search me-2"></i> Retrieve Results
-        </button>
-    </div>
-</div>
-
-<!-- Retrieve Results Modal -->
-<div class="modal fade" id="retrieveModal" tabindex="-1">
-    <div class="modal-dialog modal-md">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Retrieve Your Results</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="retrieveForm">
-                    <div class="mb-3">
-                        <label for="retrieve_kcse_index" class="form-label">KCSE Index Number</label>
-                        <input type="text" class="form-control" id="retrieve_kcse_index" 
-                               placeholder="12345678912/2024" required>
-                        <div class="form-text">Format: 11 digits followed by /year</div>
+                <!-- Quick Payment Info Section -->
+                <div class="quick-pay-section" id="quickPaySection">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-2"><i class="fas fa-bolt me-2" style="color: var(--kuccps-green);"></i>Quick Start</h5>
+                            <p class="mb-0">Pay <strong>Ksh 100 once</strong> to calculate cluster points for all 20 KUCCPS clusters. No registration needed!</p>
+                            <small class="text-muted">Complete payment first, then enter your grades.</small>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-register" onclick="startQuickPayment()">
+                                <i class="fas fa-credit-card me-2"></i> Pay Ksh 100 Now
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="mpesa_receipt" class="form-label">M-Pesa Receipt Number</label>
-                        <input type="text" class="form-control" id="mpesa_receipt" 
-                               placeholder="ABC123XYZ45" required>
-                        <div class="form-text">10-digit code from your M-Pesa confirmation message</div>
+                </div>
+                
+                <!-- User Status Display -->
+                <div id="userStatusBar" class="alert alert-info" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-user-check me-2"></i>
+                            <span id="userStatusText"></span>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="checkUserStatus()">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="logoutUser()">
+                                <i class="fas fa-sign-out-alt me-1"></i> Logout
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary" id="retrieveBtn">
+                </div>
+                
+                <!-- Already Paid? Retrieve Results -->
+                <div class="card-header text-white" style="background: linear-gradient(135deg, var(--kuccps-blue) 0%, #0D47A1 100%); margin-top: 20px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">Already Paid? Retrieve Your Results</h5>
+                            <p class="mb-0">Enter your KCSE index and M-Pesa receipt number</p>
+                        </div>
+                        <button class="btn btn-light" onclick="showRetrieveModal()">
                             <i class="fas fa-search me-2"></i> Retrieve Results
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                            Cancel
-                        </button>
                     </div>
-                </form>
-                
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Enter the KCSE index number and M-Pesa receipt number you used during payment.
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-               
+                
+                <!-- Retrieve Results Modal -->
+                <div class="modal fade" id="retrieveModal" tabindex="-1">
+                    <div class="modal-dialog modal-md">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Retrieve Your Results</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="retrieveForm">
+                                    <div class="mb-3">
+                                        <label for="retrieve_kcse_index" class="form-label">KCSE Index Number</label>
+                                        <input type="text" class="form-control" id="retrieve_kcse_index" 
+                                               placeholder="12345678912/2024" required>
+                                        <div class="form-text">Format: 11 digits followed by /year</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="mpesa_receipt" class="form-label">M-Pesa Receipt Number</label>
+                                        <input type="text" class="form-control" id="mpesa_receipt" 
+                                               placeholder="ABC123XYZ45" required>
+                                        <div class="form-text">10-digit code from your M-Pesa confirmation message</div>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary" id="retrieveBtn">
+                                            <i class="fas fa-search me-2"></i> Retrieve Results
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                                
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Enter the KCSE index number and M-Pesa receipt number you used during payment.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Payment Required Alert -->
-                <div id="paymentRequiredAlert" class="alert alert-warning" style="display: none;">
+                <div id="paymentRequiredAlert" class="alert alert-warning" style="display: none; margin-top: 20px;">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             <strong>Payment Required:</strong> You need to pay Ksh 100 to calculate cluster points.
                         </div>
-                        <button class="btn btn-sm btn-primary" onclick="showRegistrationModal()">
+                        <button class="btn btn-sm btn-primary" onclick="startQuickPayment()">
                             <i class="fas fa-credit-card me-1"></i> Pay Now
                         </button>
                     </div>
@@ -985,12 +1028,10 @@
                         </div>
                     </div>
                     
-                    <!-- Technical Subjects (Group IV) -->
+                    <!-- Technical Subjects (Group IV) - Keep all your existing technical subject selects -->
                     <div class="subject-category">
                         <h4 class="category-title"><i class="fas fa-cogs"></i> Technical Subjects</h4>
                         <div class="row">
-                            <!-- Keep all your technical subject select inputs here -->
-                            <!-- This section remains exactly as you had it -->
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="agriculture" class="form-label">Agriculture:</label>
@@ -1031,19 +1072,19 @@
                                     </select>
                                 </div>
                             </div>
-                            <!-- ... continue with all other technical subjects ... -->
+                            <!-- Continue with all other technical subjects as in your original code -->
                         </div>
                     </div>
                     
                     <!-- Action Buttons -->
-                   <div class="text-center mt-5 mb-4">
-    <button type="submit" class="btn btn-calculate me-3" id="calculateBtn">
-        <i class="fas fa-calculator me-2"></i> Calculate Cluster Points
-    </button>
-    <button type="button" class="btn btn-reset" onclick="resetForm()">
-        <i class="fas fa-redo me-2"></i> Reset Form
-    </button>
-</div>
+                    <div class="text-center mt-5 mb-4">
+                        <button type="submit" class="btn btn-calculate me-3" id="calculateBtn">
+                            <i class="fas fa-calculator me-2"></i> Calculate Cluster Points
+                        </button>
+                        <button type="button" class="btn btn-reset" onclick="resetForm()">
+                            <i class="fas fa-redo me-2"></i> Reset Form
+                        </button>
+                    </div>
                 </form>
                 
                 <!-- Results Section -->
@@ -1120,16 +1161,41 @@
     let paymentCheckInterval = null;
     let checkoutRequestId = null;
     let userData = null;
+    let hasPaid = false;
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        // Remove user status check since we don't need login anymore
+        checkPaymentStatusOnLoad();
         updateUI();
     });
 
+    // Check if user has already paid when page loads
+    async function checkPaymentStatusOnLoad() {
+        try {
+            const response = await fetch('/my_results', {
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.payment_status === 'completed') {
+                hasPaid = true;
+                showUserStatusBar(data);
+            } else {
+                hasPaid = false;
+                showPaymentRequiredAlert();
+            }
+        } catch (error) {
+            console.log('Not logged in or error checking status');
+            hasPaid = false;
+        }
+    }
+
     // Show loading spinner
-    function showLoading(show = true) {
+    function showLoading(show = true, text = 'Loading...') {
         const spinner = document.getElementById('loadingSpinner');
+        const loadingText = document.getElementById('loadingText');
+        loadingText.textContent = text;
         spinner.style.display = show ? 'flex' : 'none';
     }
 
@@ -1137,13 +1203,85 @@
     function resetForm() {
         document.getElementById('gradesForm').reset();
         document.getElementById('resultsSection').style.display = 'none';
-        document.getElementById('calculateBtn').disabled = false; // Always enabled
+        document.getElementById('calculateBtn').disabled = !hasPaid;
     }
 
-    // Show registration modal
-    function showRegistrationModal() {
+    // Start quick payment process
+    function startQuickPayment() {
         const modal = new bootstrap.Modal(document.getElementById('registrationModal'));
         modal.show();
+    }
+
+    // Show user status bar
+    function showUserStatusBar(data) {
+        const statusBar = document.getElementById('userStatusBar');
+        const statusText = document.getElementById('userStatusText');
+        
+        statusText.innerHTML = `
+            Logged in as: <strong>${data.kcse_index}</strong> | 
+            Email: <strong>${data.email}</strong> | 
+            Payment: <span class="badge bg-success">Completed ✓</span> |
+            Calculations: <strong>${data.calculation_count || 0}</strong>
+        `;
+        
+        statusBar.style.display = 'block';
+        document.getElementById('quickPaySection').style.display = 'none';
+        document.getElementById('paymentRequiredAlert').style.display = 'none';
+        document.getElementById('calculateBtn').disabled = false;
+    }
+
+    // Show payment required alert
+    function showPaymentRequiredAlert() {
+        document.getElementById('paymentRequiredAlert').style.display = 'block';
+        document.getElementById('calculateBtn').disabled = true;
+        document.getElementById('userStatusBar').style.display = 'none';
+        document.getElementById('quickPaySection').style.display = 'block';
+    }
+
+    // Check user status
+    async function checkUserStatus() {
+        showLoading(true, 'Checking user status...');
+        try {
+            const response = await fetch('/my_results', {
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.payment_status === 'completed') {
+                    hasPaid = true;
+                    showUserStatusBar(data);
+                } else {
+                    hasPaid = false;
+                    showPaymentRequiredAlert();
+                }
+            }
+        } catch (error) {
+            console.error('Error checking status:', error);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // Logout user
+    async function logoutUser() {
+        showLoading(true, 'Logging out...');
+        try {
+            const response = await fetch('/logout', {
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                hasPaid = false;
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Error logging out:', error);
+            showLoading(false);
+        }
     }
 
     // Show retrieve modal
@@ -1155,8 +1293,7 @@
     // Update UI based on user status
     function updateUI() {
         const calculateBtn = document.getElementById('calculateBtn');
-        // Always enable calculate button since we removed login requirement
-        calculateBtn.disabled = false;
+        calculateBtn.disabled = !hasPaid;
     }
 
     // Format cluster points with color coding
@@ -1407,7 +1544,27 @@
                 const registrationModal = bootstrap.Modal.getInstance(document.getElementById('registrationModal'));
                 registrationModal.hide();
                 
-                // Show payment modal
+                // If local test mode or already paid, show success
+                if (data.can_calculate || data.local_test_mode) {
+                    hasPaid = true;
+                    updateUI();
+                    
+                    // Show success message
+                    showSuccessMessage('Payment completed! You can now calculate your cluster points.');
+                    
+                    // Update user status
+                    await checkUserStatus();
+                    
+                    // Focus on form
+                    document.getElementById('gradesForm').scrollIntoView({ behavior: 'smooth' });
+                    setTimeout(() => {
+                        document.getElementById('mathematics').focus();
+                    }, 500);
+                    
+                    return;
+                }
+                
+                // Show payment modal for production
                 checkoutRequestId = data.checkout_request_id;
                 const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
                 paymentModal.show();
@@ -1448,37 +1605,32 @@
                     if (data.status === 'completed') {
                         clearInterval(paymentCheckInterval);
                         
-                        // Update payment modal to redirect to grade entry
+                        // Update payment modal
                         paymentStatusText.textContent = 'Payment Successful!';
                         paymentInstructions.style.display = 'none';
                         paymentSuccess.style.display = 'block';
                         
-                        // Update success button to go directly to grade entry
+                        // Update success button
                         const successBtn = paymentSuccess.querySelector('button');
                         successBtn.innerHTML = '<i class="fas fa-calculator me-2"></i> Enter Grades Now';
                         successBtn.onclick = function() {
                             paymentModal.hide();
+                            hasPaid = true;
+                            updateUI();
                             
                             // Scroll to the form
                             document.getElementById('gradesForm').scrollIntoView({ behavior: 'smooth' });
                             
-                            // Highlight the form area
-                            const formContainer = document.querySelector('.card-body');
-                            formContainer.style.boxShadow = '0 0 20px rgba(46, 125, 50, 0.5)';
-                            formContainer.style.transition = 'box-shadow 0.5s';
+                            // Show success message
+                            showSuccessMessage('Payment confirmed! Please enter your KCSE grades to calculate cluster points.');
+                            
+                            // Update user status
+                            checkUserStatus();
                             
                             // Focus on first input field
                             setTimeout(() => {
                                 document.getElementById('mathematics').focus();
                             }, 500);
-                            
-                            // Show success message
-                            showSuccessMessage('Payment confirmed! Please enter your KCSE grades to calculate cluster points.');
-                            
-                            // Remove highlight after 3 seconds
-                            setTimeout(() => {
-                                formContainer.style.boxShadow = '';
-                            }, 3000);
                         };
                         
                     } else if (data.status === 'failed') {
@@ -1562,6 +1714,10 @@
                 const retrieveModal = bootstrap.Modal.getInstance(document.getElementById('retrieveModal'));
                 retrieveModal.hide();
                 
+                // Set as paid
+                hasPaid = true;
+                updateUI();
+                
                 // Populate the form with retrieved grades
                 if (data.grades) {
                     populateFormWithGrades(data.grades);
@@ -1570,6 +1726,9 @@
                     setTimeout(() => {
                         calculateAndDisplayRetrievedResults(data);
                     }, 500);
+                    
+                    // Show success message
+                    showSuccessMessage(`Results retrieved for ${data.kcse_index}`);
                 }
             } else {
                 alert('Error: ' + data.error);
@@ -1595,7 +1754,7 @@
     // Calculate and display retrieved results
     function calculateAndDisplayRetrievedResults(data) {
         // Show loading
-        showLoading(true);
+        showLoading(true, 'Displaying retrieved results...');
         
         // Use the already calculated results from the server
         if (data.results) {
@@ -1610,17 +1769,21 @@
             // Display results
             displayResults(displayData);
             
-            // Show success message
-            showSuccessMessage(`Results retrieved for ${data.kcse_index}`);
+            // Hide loading
+            showLoading(false);
         }
-        
-        // Hide loading
-        showLoading(false);
     }
 
     // Handle grades form submission
     document.getElementById('gradesForm').addEventListener('submit', async function(e) {
         e.preventDefault();
+        
+        // Check if user has paid
+        if (!hasPaid) {
+            alert('Please complete payment first before calculating cluster points.');
+            showPaymentRequiredAlert();
+            return;
+        }
         
         // Collect form data
         const formData = new FormData(this);
@@ -1640,7 +1803,7 @@
         }
         
         // Show loading spinner
-        showLoading(true);
+        showLoading(true, 'Calculating cluster points...');
         
         try {
             // Send data to backend
@@ -1669,9 +1832,11 @@
                     document.getElementById('resultsSection').prepend(warningAlert);
                 }
             } else {
-                if (data.error && data.error.includes('Payment required')) {
+                if (data.error && (data.error.includes('Payment required') || data.error.includes('Registration required'))) {
                     alert('Payment required. Please complete payment first.');
-                    showRegistrationModal();
+                    hasPaid = false;
+                    updateUI();
+                    showPaymentRequiredAlert();
                 } else {
                     alert('Error calculating points: ' + (data.error || 'Unknown error'));
                 }
@@ -1687,8 +1852,6 @@
     // Download results as PDF
     function downloadResults() {
         alert('PDF download feature will be implemented in the backend. Results are saved to your account.');
-        // This would typically call a backend endpoint to generate PDF
-        // window.open('/download_results', '_blank');
     }
 
     // Initialize sort buttons
@@ -1702,6 +1865,6 @@
             });
         });
     });
-</script>
+    </script>
 </body>
 </html>
