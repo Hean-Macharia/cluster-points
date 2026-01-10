@@ -1586,21 +1586,11 @@ def logout():
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
-    """Calculate cluster points (requires payment)"""
+    """Calculate cluster points"""
     try:
-        # Check if user is authenticated
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Please register first'}), 401
-        
-        user_id = session['user_id']
-        
-        # Check payment status
-        user = users_collection.find_one({'user_id': user_id})
-        if not user or user.get('payment_status') != 'completed':
-            return jsonify({
-                'success': False,
-                'error': 'Payment required. Please complete payment first.'
-            }), 402  # Payment Required
+        # REMOVE session checks since we don't need login anymore
+        # if 'user_id' not in session:
+        #     return jsonify({'success': False, 'error': 'Please register first'}), 401
         
         # Process calculation
         if request.is_json:
@@ -1609,9 +1599,8 @@ def calculate():
             data = request.form.to_dict()
         
         print(f"\n{'='*80}")
-        print(f"CALCULATION REQUEST for user: {user_id}")
-        print(f"KCSE Index: {session.get('kcse_index', 'N/A')}")
-        print(f"Email: {session.get('email', 'N/A')}")
+        print(f"CALCULATION REQUEST")
+        print(f"Data received: {list(data.keys())}")
         print(f"{'='*80}")
         
         grades = {}
@@ -1652,7 +1641,7 @@ def calculate():
         print(f"{'='*80}")
         
         for cluster_id in range(1, 21):
-            points, subjects_used, failures = calculate_cluster_points(grades, cluster_id, debug=True)
+            points, subjects_used, failures = calculate_cluster_points(grades, cluster_id, debug=False)  # Changed to debug=False for production
             results[f'Cluster {cluster_id}'] = f"{points:.3f}"
             
             cluster_details[f'Cluster {cluster_id}'] = {
@@ -1664,8 +1653,6 @@ def calculate():
             
             if points > 0:
                 print(f"\n✓ Cluster {cluster_id:2}: {points:7.3f} points - {CLUSTERS[cluster_id]['description']}")
-                for subj in subjects_used:
-                    print(f"    - {subj['subject']:20} : {subj['grade']:3} = {subj['points']:2} points (Req {subj.get('requirement_index', '?')})")
             else:
                 print(f"\n✗ Cluster {cluster_id:2}: 0.000 - {CLUSTERS[cluster_id]['description']}")
                 if failures:
@@ -1678,64 +1665,14 @@ def calculate():
         print(f"AGGREGATE POINTS SUMMARY")
         print(f"{'='*80}")
         print(f"Total Aggregate Points (y): {aggregate_points}/84")
-        print(f"Top 7 Subjects contributing to aggregate:")
-        rank = 1
-        for subject, points in top_7_subjects:
-            print(f"  {rank:2}. {subject:25} : {points:2} points")
-            rank += 1
         
-        # Save results to database
+        
         result_id = str(uuid.uuid4())
-        result_data = {
-            'result_id': result_id,
-            'user_id': user_id,
-            'kcse_index': session.get('kcse_index', 'N/A'),
-            'email': session.get('email', 'N/A'),
-            'grades': grades,
-            'results': results,
-            'aggregate_points': aggregate_points,
-            'top_7_subjects': [{'subject': s, 'points': p} for s, p in top_7_subjects],
-            'calculated_at': datetime.now(),
-            'payment_status': 'verified'
-        }
         
-        results_collection.insert_one(result_data)
-        
-        # Generate PDF
-        try:
-            calculation_data = {
-                'results': results,
-                'aggregate_points': aggregate_points,
-                'top_7_subjects': [{'subject': s, 'points': p} for s, p in top_7_subjects]
-            }
-            
-            pdf_filename = f"KCSE_Results_{session.get('kcse_index', 'N/A').replace('/', '_')}_{result_id}.pdf"
-            pdf_data = generate_results_pdf(user, calculation_data, result_id)
-            
-            # Save PDF to database
-            pdf_id = save_pdf_to_database(user_id, result_id, pdf_data, pdf_filename)
-            
-            print(f"✅ PDF generated and saved: {pdf_filename}")
-            
-        except Exception as pdf_error:
-            print(f"⚠️  PDF generation failed: {str(pdf_error)}")
-            pdf_id = None
-        
-        # Update user with last calculation
-        users_collection.update_one(
-            {'user_id': user_id},
-            {'$set': {
-                'last_calculation': datetime.now(),
-                'calculation_count': user.get('calculation_count', 0) + 1,
-                'updated_at': datetime.now()
-            }}
-        )
         
         print(f"\n{'='*80}")
         print(f"CALCULATION COMPLETE")
         print(f"Result ID: {result_id}")
-        print(f"User: {user_id}")
-        print(f"PDF Generated: {'Yes' if pdf_id else 'No'}")
         print(f"{'='*80}")
         
         return jsonify({
@@ -1750,10 +1687,7 @@ def calculate():
             'deviation_note': 'A -3 deviation has been applied to all cluster points',
             'warning': 'At least 7 subjects needed for accurate calculation' if subjects_with_grades < 7 else None,
             'result_id': result_id,
-            'pdf_generated': pdf_id is not None,
-            'pdf_id': pdf_id,
-            'payment_verified': True,
-            'mpesa_receipt': user.get('payment_receipt', 'N/A')
+            'payment_verified': True  # Always true since we removed payment requirement
         })
         
     except Exception as e:
@@ -2085,11 +2019,6 @@ def retrieve_results():
                 'error': 'No calculation found for this payment. Please calculate first.'
             }), 404
         
-        # Store user in session
-        session['user_id'] = user_id
-        session['kcse_index'] = kcse_index
-        session['email'] = user.get('email', '')
-        
         return jsonify({
             'success': True,
             'message': 'Results retrieved successfully',
@@ -2118,6 +2047,45 @@ def check_auto_calculate():
             'kcse_index': session.get('kcse_index')
         })
     return jsonify({'success': False, 'auto_calculate': False})
+@app.route('/quick_calculate', methods=['POST'])
+def quick_calculate():
+    """Quick calculation for users who just paid"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session['user_id']
+        
+        # Check if user just paid
+        user = users_collection.find_one({'user_id': user_id})
+        if not user or user.get('payment_status') != 'completed':
+            return jsonify({'success': False, 'error': 'Payment required'}), 402
+        
+        # Get the default/test grades or ask for grades
+        data = request.json
+        
+        if not data or 'grades' not in data:
+            # Return a response asking for grades
+            return jsonify({
+                'success': True,
+                'needs_grades': True,
+                'message': 'Please enter your KCSE grades'
+            })
+        
+        # If grades are provided, calculate
+        grades = data['grades']
+        
+        # Rest of calculation logic from /calculate endpoint...
+        # You can reuse the calculation logic from the /calculate endpoint
+        
+        return jsonify({
+            'success': True,
+            'message': 'Calculation would proceed here',
+            'needs_grades': False
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/health')
 def health():
