@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - KCSE Cluster Points Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+        .payment-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .payment-amount {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border: 2px solid #2E7D32;
+        }
+        .form-control {
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 2px solid #9E9E9E;
+        }
+        .form-control:focus {
+            border-color: #C62828;
+            box-shadow: 0 0 0 0.25rem rgba(198, 40, 40, 0.25);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="payment-card">
+            <h2 class="text-center mb-4" style="color: #C62828;">
+                <i class="fas fa-credit-card me-2"></i>Complete Payment
+            </h2>
+            
+            <div class="payment-amount">
+                <h1 class="mb-2">Ksh {{ amount }}</h1>
+                <p class="mb-0">KCSE Cluster Points Calculation</p>
+            </div>
+            
+            <form id="paymentForm">
+                <div class="mb-4">
+                    <label for="phone_number" class="form-label">
+                        <i class="fas fa-phone me-1"></i> M-Pesa Phone Number
+                    </label>
+                    <input type="tel" class="form-control" id="phone_number" 
+                           placeholder="0712345678 or 254712345678" required>
+                    <div class="form-text">Enter your M-Pesa registered phone number</div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success" id="payBtn">
+                        <i class="fas fa-mobile-alt me-2"></i> Pay with M-Pesa
+                    </button>
+                    <a href="/register" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                </div>
+            </form>
+            
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3" id="loadingText">Initiating payment...</p>
+                <div id="paymentStatus" class="mt-3"></div>
+            </div>
+            
+            <div class="mt-4">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Instructions:</strong> After clicking "Pay with M-Pesa", check your phone for an STK Push notification. Enter your M-Pesa PIN to complete the payment.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let checkoutRequestId = null;
+        let checkInterval = null;
+        
+        document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const payBtn = document.getElementById('payBtn');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const loadingText = document.getElementById('loadingText');
+            const paymentStatus = document.getElementById('paymentStatus');
+            
+            // Show loading
+            payBtn.style.display = 'none';
+            loadingSpinner.style.display = 'block';
+            loadingText.textContent = 'Initiating payment...';
+            
+            try {
+                const response = await fetch('/payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone_number: document.getElementById('phone_number').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    checkoutRequestId = data.checkout_request_id;
+                    loadingText.textContent = 'Payment initiated. Please check your phone and enter your M-Pesa PIN...';
+                    paymentStatus.innerHTML = '<div class="alert alert-info">Waiting for payment confirmation...</div>';
+                    
+                    // Start checking payment status
+                    checkPaymentStatus();
+                } else {
+                    loadingText.textContent = 'Payment failed';
+                    paymentStatus.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                    payBtn.style.display = 'block';
+                }
+            } catch (error) {
+                loadingText.textContent = 'Network error';
+                paymentStatus.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+                payBtn.style.display = 'block';
+            }
+        });
+        
+        function checkPaymentStatus() {
+            if (!checkoutRequestId) return;
+            
+            checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/check_payment/${checkoutRequestId}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        if (data.status === 'completed') {
+                            clearInterval(checkInterval);
+                            document.getElementById('loadingText').textContent = 'Payment successful!';
+                            document.getElementById('paymentStatus').innerHTML = `
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Payment verified! Redirecting to calculator...
+                                </div>
+                            `;
+                            
+                            // Redirect to calculator after 2 seconds
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 2000);
+                        } else if (data.status === 'failed') {
+                            clearInterval(checkInterval);
+                            document.getElementById('loadingText').textContent = 'Payment failed';
+                            document.getElementById('paymentStatus').innerHTML = `
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-times-circle me-2"></i>
+                                    Payment failed. Please try again.
+                                </div>
+                            `;
+                            document.getElementById('payBtn').style.display = 'block';
+                        }
+                        // If pending, continue checking
+                    }
+                } catch (error) {
+                    console.error('Error checking payment:', error);
+                }
+            }, 3000); // Check every 3 seconds
+            
+            // Stop checking after 5 minutes
+            setTimeout(() => {
+                if (checkInterval) {
+                    clearInterval(checkInterval);
+                    document.getElementById('loadingText').textContent = 'Payment timeout';
+                    document.getElementById('paymentStatus').innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-clock me-2"></i>
+                            Payment timeout. Please try again.
+                        </div>
+                    `;
+                    document.getElementById('payBtn').style.display = 'block';
+                }
+            }, 300000); // 5 minutes
+        }
+    </script>
+</body>
+</html>

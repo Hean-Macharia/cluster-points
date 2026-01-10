@@ -1,0 +1,560 @@
+{% extends "base.html" %}
+
+{% block title %}KUCCPS Cluster Points - Results{% endblock %}
+
+{% block extra_css %}
+<style>
+    .results-hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+        border-radius: 10px;
+    }
+    .cluster-card {
+        transition: all 0.3s ease;
+        border-left: 5px solid #0d6efd;
+    }
+    .cluster-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .cluster-card.highlight {
+        border-left-color: #198754;
+        background-color: #f8fff9;
+    }
+    .points-badge {
+        font-size: 1.2rem;
+        padding: 0.5rem 1rem;
+    }
+    .subject-tag {
+        display: inline-block;
+        background: #e9ecef;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        margin: 0.1rem;
+        font-size: 0.85rem;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 2rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-hero text-center">
+    <div class="container">
+        <h1 class="display-4 mb-3">
+            <i class="fas fa-chart-line"></i> Your Cluster Points Results
+        </h1>
+        <p class="lead">Complete breakdown of your KUCCPS cluster points across all 20 clusters</p>
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="stat-card bg-white text-dark p-3 rounded">
+                    <h6>AGP Score</h6>
+                    <h3 id="hero-agp">0</h3>
+                    <small>Out of 84</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-white text-dark p-3 rounded">
+                    <h6>Best Cluster</h6>
+                    <h3 id="hero-best">C1</h3>
+                    <small id="hero-best-points">0 points</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-white text-dark p-3 rounded">
+                    <h6>Eligible Clusters</h6>
+                    <h3 id="hero-eligible">0</h3>
+                    <small>Out of 20</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-white text-dark p-3 rounded">
+                    <h6>Average Points</h6>
+                    <h3 id="hero-average">0.00</h3>
+                    <small>Across clusters</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Actions Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="/" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Calculator
+                    </a>
+                </div>
+                <div>
+                    <button class="btn btn-outline-success me-2" id="exportAllBtn">
+                        <i class="fas fa-download"></i> Export All Data
+                    </button>
+                    <button class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print Results
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Cluster Points Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="clusterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Eligibility Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="eligibilityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Clusters Results -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0"><i class="fas fa-list-ol"></i> All Cluster Results (1-20)</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="allClustersTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Cluster Name</th>
+                                    <th>Points</th>
+                                    <th>Eligibility</th>
+                                    <th>Status</th>
+                                    <th>Subjects Used</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clustersTableBody">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Breakdown -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Top 3 Recommended Clusters</h5>
+                </div>
+                <div class="card-body" id="topClustersContainer">
+                    <!-- Filled by JavaScript -->
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-book"></i> Your Best Subjects</h5>
+                </div>
+                <div class="card-body" id="bestSubjectsContainer">
+                    <!-- Filled by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-lightbulb"></i> Recommendations & Next Steps</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="recommendation-card p-3 border rounded h-100">
+                                <h5><i class="fas fa-university text-primary"></i> Course Selection</h5>
+                                <p>Focus on courses within your top 3 clusters. These give you the highest chance of admission.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="recommendation-card p-3 border rounded h-100">
+                                <h5><i class="fas fa-clipboard-check text-success"></i> Application Strategy</h5>
+                                <p>Apply to multiple programs within eligible clusters to increase your chances.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="recommendation-card p-3 border rounded h-100">
+                                <h5><i class="fas fa-calendar-alt text-warning"></i> Deadlines</h5>
+                                <p>Check KUCCPS portal for application deadlines and required documents.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if we have data in session
+        fetch('/api/session-data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.results) {
+                    renderResults(data.results);
+                } else {
+                    // Redirect to home if no data
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.location.href = '/';
+            });
+        
+        // Export button
+        document.getElementById('exportAllBtn').addEventListener('click', function() {
+            exportAllData();
+        });
+    });
+    
+    function renderResults(data) {
+        // Update hero stats
+        document.getElementById('hero-agp').textContent = data.summary.agp;
+        
+        const eligibleClusters = data.results.filter(r => r.eligible);
+        const points = data.results.map(r => r.points).filter(p => p > 0);
+        
+        if (data.results.length > 0) {
+            const bestCluster = data.results[0];
+            document.getElementById('hero-best').textContent = `C${bestCluster.cluster}`;
+            document.getElementById('hero-best-points').textContent = `${bestCluster.points.toFixed(2)} points`;
+        }
+        
+        document.getElementById('hero-eligible').textContent = eligibleClusters.length;
+        
+        if (points.length > 0) {
+            const average = points.reduce((a, b) => a + b, 0) / points.length;
+            document.getElementById('hero-average').textContent = average.toFixed(2);
+        }
+        
+        // Render clusters table
+        renderClustersTable(data.results);
+        
+        // Render top clusters
+        renderTopClusters(data.results.slice(0, 3));
+        
+        // Render best subjects
+        renderBestSubjects(data.subjects);
+        
+        // Create charts
+        createClusterChart(data.results);
+        createEligibilityChart(data.results);
+    }
+    
+    function renderClustersTable(clusters) {
+        const tbody = document.getElementById('clustersTableBody');
+        tbody.innerHTML = '';
+        
+        clusters.forEach(cluster => {
+            const row = document.createElement('tr');
+            row.className = cluster.eligible ? 'table-success' : '';
+            
+            row.innerHTML = `
+                <td><strong>C${cluster.cluster}</strong></td>
+                <td>${cluster.name}</td>
+                <td>
+                    <span class="badge ${cluster.points > 30 ? 'bg-success' : cluster.points > 20 ? 'bg-warning' : 'bg-secondary'} fs-6">
+                        ${cluster.points.toFixed(2)}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${cluster.eligible ? 'bg-success' : 'bg-danger'}">
+                        ${cluster.eligible ? '✓ Eligible' : '✗ Not Eligible'}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge ${cluster.status === 'Success' ? 'bg-success' : 'bg-warning'}">
+                        ${cluster.status}
+                    </span>
+                </td>
+                <td>
+                    <div>
+                        ${cluster.used_subjects ? cluster.used_subjects.map(sub => 
+                            `<span class="subject-tag">${sub}</span>`
+                        ).join('') : 'N/A'}
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info" onclick="showClusterDetails(${cluster.cluster})">
+                        <i class="fas fa-info-circle"></i> Details
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+    
+    function renderTopClusters(topClusters) {
+        const container = document.getElementById('topClustersContainer');
+        container.innerHTML = '';
+        
+        topClusters.forEach(cluster => {
+            const card = document.createElement('div');
+            card.className = 'cluster-card p-3 mb-3 border rounded';
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">C${cluster.cluster}: ${cluster.name}</h5>
+                        <p class="mb-1 text-muted">${cluster.subjects?.length || 0} subjects used</p>
+                        <div class="mb-2">
+                            ${cluster.used_subjects ? cluster.used_subjects.map(sub => 
+                                `<span class="subject-tag">${sub}</span>`
+                            ).join('') : ''}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="points-badge badge bg-success">${cluster.points.toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">Recommended courses in this cluster:</small>
+                    <p class="mb-0">Multiple degree programs available</p>
+                </div>
+            `;
+            
+            container.appendChild(card);
+        });
+    }
+    
+    function renderBestSubjects(subjects) {
+        const container = document.getElementById('bestSubjectsContainer');
+        container.innerHTML = '';
+        
+        // Take top 5 subjects
+        const topSubjects = subjects.slice(0, 5);
+        
+        topSubjects.forEach(subject => {
+            const subjectDiv = document.createElement('div');
+            subjectDiv.className = 'subject-item d-flex justify-content-between align-items-center p-2 border-bottom';
+            subjectDiv.innerHTML = `
+                <div>
+                    <h6 class="mb-0">${subject.name}</h6>
+                    <small class="text-muted">Group ${subject.group}</small>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-primary">${subject.grade}</span>
+                    <div><small>${subject.points} points</small></div>
+                </div>
+            `;
+            
+            container.appendChild(subjectDiv);
+        });
+    }
+    
+    function createClusterChart(clusters) {
+        const ctx = document.getElementById('clusterChart').getContext('2d');
+        const clusterNumbers = clusters.map(c => c.cluster);
+        const points = clusters.map(c => c.points);
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: clusterNumbers.map(c => `C${c}`),
+                datasets: [{
+                    label: 'Cluster Points',
+                    data: points,
+                    backgroundColor: points.map(p => 
+                        p > 30 ? '#198754' : 
+                        p > 20 ? '#ffc107' : 
+                        '#6c757d'
+                    ),
+                    borderColor: points.map(p => 
+                        p > 30 ? '#146c43' : 
+                        p > 20 ? '#e0a800' : 
+                        '#495057'
+                    ),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 48,
+                        title: {
+                            display: true,
+                            text: 'Cluster Points'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Cluster Number'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const cluster = clusters[context.dataIndex];
+                                return [
+                                    `Cluster ${cluster.cluster}: ${cluster.name}`,
+                                    `Points: ${cluster.points.toFixed(2)}`,
+                                    `Status: ${cluster.status}`,
+                                    `Eligible: ${cluster.eligible ? 'Yes' : 'No'}`
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function createEligibilityChart(clusters) {
+        const ctx = document.getElementById('eligibilityChart').getContext('2d');
+        const eligibleCount = clusters.filter(c => c.eligible).length;
+        const notEligibleCount = clusters.length - eligibleCount;
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Eligible', 'Not Eligible'],
+                datasets: [{
+                    data: [eligibleCount, notEligibleCount],
+                    backgroundColor: [
+                        '#198754',
+                        '#dc3545'
+                    ],
+                    borderColor: [
+                        '#146c43',
+                        '#b02a37'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label;
+                                const value = context.raw;
+                                const percentage = Math.round((value / clusters.length) * 100);
+                                return `${label}: ${value} clusters (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function showClusterDetails(clusterNumber) {
+        // Fetch cluster details and show in modal
+        fetch(`/api/cluster/${clusterNumber}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show modal with cluster details
+                    const modal = new bootstrap.Modal(document.getElementById('clusterDetailsModal'));
+                    
+                    // Set modal content
+                    document.getElementById('clusterDetailsContent').innerHTML = `
+                        <h4>Cluster ${clusterNumber}: ${data.cluster.name}</h4>
+                        <p>${data.cluster.description}</p>
+                        <h5>Requirements:</h5>
+                        <ul>
+                            ${data.cluster.requirements.map(req => `<li>${req}</li>`).join('')}
+                        </ul>
+                        <h5>Popular Courses:</h5>
+                        <ul>
+                            ${data.cluster.popular_courses.map(course => `<li>${course}</li>`).join('')}
+                        </ul>
+                    `;
+                    
+                    modal.show();
+                }
+            });
+    }
+    
+    function exportAllData() {
+        fetch('/api/export/json')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Create download link
+                    const dataStr = JSON.stringify(data, null, 2);
+                    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                    
+                    const linkElement = document.createElement('a');
+                    linkElement.setAttribute('href', dataUri);
+                    linkElement.setAttribute('download', `kuccps_full_results_${new Date().toISOString().slice(0,10)}.json`);
+                    linkElement.click();
+                }
+            });
+    }
+</script>
+
+<!-- Cluster Details Modal -->
+<div class="modal fade" id="clusterDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Cluster Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="clusterDetailsContent">
+                <!-- Filled by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
