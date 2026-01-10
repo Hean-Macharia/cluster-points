@@ -63,6 +63,7 @@
             <div class="payment-amount">
                 <h1 class="mb-2">Ksh {{ amount }}</h1>
                 <p class="mb-0">KCSE Cluster Points Calculation</p>
+                <small>Pay once, calculate unlimited times</small>
             </div>
             
             <form id="paymentForm">
@@ -79,8 +80,8 @@
                     <button type="submit" class="btn btn-success" id="payBtn">
                         <i class="fas fa-mobile-alt me-2"></i> Pay with M-Pesa
                     </button>
-                    <a href="/register" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-2"></i> Back
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Calculator
                     </a>
                 </div>
             </form>
@@ -97,6 +98,11 @@
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Instructions:</strong> After clicking "Pay with M-Pesa", check your phone for an STK Push notification. Enter your M-Pesa PIN to complete the payment.
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> After payment, you will be redirected back to calculate your cluster points.
                 </div>
             </div>
         </div>
@@ -120,7 +126,7 @@
             loadingText.textContent = 'Initiating payment...';
             
             try {
-                const response = await fetch('/payment', {
+                const response = await fetch('/process_payment', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -162,8 +168,8 @@
                     if (data.success) {
                         if (data.status === 'completed') {
                             clearInterval(checkInterval);
-                            document.getElementById('loadingText').textContent = 'Payment successful!';
-                            document.getElementById('paymentStatus').innerHTML = `
+                            loadingText.textContent = 'Payment successful!';
+                            paymentStatus.innerHTML = `
                                 <div class="alert alert-success">
                                     <i class="fas fa-check-circle me-2"></i>
                                     Payment verified! Redirecting to calculator...
@@ -176,8 +182,8 @@
                             }, 2000);
                         } else if (data.status === 'failed') {
                             clearInterval(checkInterval);
-                            document.getElementById('loadingText').textContent = 'Payment failed';
-                            document.getElementById('paymentStatus').innerHTML = `
+                            loadingText.textContent = 'Payment failed';
+                            paymentStatus.innerHTML = `
                                 <div class="alert alert-danger">
                                     <i class="fas fa-times-circle me-2"></i>
                                     Payment failed. Please try again.
@@ -196,8 +202,8 @@
             setTimeout(() => {
                 if (checkInterval) {
                     clearInterval(checkInterval);
-                    document.getElementById('loadingText').textContent = 'Payment timeout';
-                    document.getElementById('paymentStatus').innerHTML = `
+                    loadingText.textContent = 'Payment timeout';
+                    paymentStatus.innerHTML = `
                         <div class="alert alert-warning">
                             <i class="fas fa-clock me-2"></i>
                             Payment timeout. Please try again.
