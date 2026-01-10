@@ -2037,6 +2037,88 @@ def test_formula():
         'deviation_applied': -3
     })
 
+@app.route('/retrieve_results', methods=['POST'])
+def retrieve_results():
+    """Retrieve results using KCSE index and M-Pesa receipt"""
+    try:
+        data = request.json
+        
+        kcse_index = data.get('kcse_index', '').strip()
+        mpesa_receipt = data.get('mpesa_receipt', '').strip().upper()
+        
+        print(f"🔍 Retrieving results for: {kcse_index}, Receipt: {mpesa_receipt}")
+        
+        # Validate KCSE index
+        is_valid_index, index_msg = validate_kcse_index(kcse_index)
+        if not is_valid_index:
+            return jsonify({'success': False, 'error': index_msg}), 400
+        
+        # Find payment with this receipt and KCSE index
+        payment_record = payments_collection.find_one({
+            'mpesa_receipt': mpesa_receipt,
+            'kcse_index': kcse_index,
+            'status': 'completed'
+        })
+        
+        if not payment_record:
+            return jsonify({
+                'success': False, 
+                'error': 'No results found. Please check your KCSE index and M-Pesa receipt number.'
+            }), 404
+        
+        user_id = payment_record.get('user_id')
+        
+        # Find user
+        user = users_collection.find_one({'user_id': user_id})
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Find latest results for this user
+        latest_result = results_collection.find_one(
+            {'user_id': user_id},
+            sort=[('calculated_at', -1)]
+        )
+        
+        if not latest_result:
+            return jsonify({
+                'success': False, 
+                'error': 'No calculation found for this payment. Please calculate first.'
+            }), 404
+        
+        # Store user in session
+        session['user_id'] = user_id
+        session['kcse_index'] = kcse_index
+        session['email'] = user.get('email', '')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Results retrieved successfully',
+            'kcse_index': kcse_index,
+            'user_id': user_id,
+            'grades': latest_result.get('grades', {}),
+            'results': latest_result.get('results', {}),
+            'aggregate_points': latest_result.get('aggregate_points', 0),
+            'top_7_subjects': latest_result.get('top_7_subjects', []),
+            'calculated_at': latest_result.get('calculated_at').isoformat() if latest_result.get('calculated_at') else None
+        })
+        
+    except Exception as e:
+        print(f"❌ Retrieve results error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@app.route('/check_auto_calculate')
+def check_auto_calculate():
+    """Check if user should auto-calculate after payment"""
+    if 'user_id' in session and session.get('auto_calculate'):
+        session.pop('auto_calculate', None)
+        return jsonify({
+            'success': True,
+            'auto_calculate': True,
+            'user_id': session.get('user_id'),
+            'kcse_index': session.get('kcse_index')
+        })
+    return jsonify({'success': False, 'auto_calculate': False})
+
 @app.route('/health')
 def health():
     is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)

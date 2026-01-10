@@ -652,20 +652,61 @@
             </div>
             
             <div class="card-body p-4">
-                <!-- User Info Bar -->
-                <div id="userInfoBar" class="user-info-bar" style="display: none;">
-                    <div>
-                        <i class="fas fa-user-circle me-2"></i>
-                        <span id="userKcseIndex"></span> | 
-                        <span id="userEmail"></span>
+                <div class="card-header text-white" style="background: linear-gradient(135deg, var(--kuccps-blue) 0%, #0D47A1 100%);">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-1">Already Paid? Retrieve Your Results</h5>
+            <p class="mb-0">Enter your KCSE index and M-Pesa receipt number</p>
+        </div>
+        <button class="btn btn-light" onclick="showRetrieveModal()">
+            <i class="fas fa-search me-2"></i> Retrieve Results
+        </button>
+    </div>
+</div>
+
+<!-- Retrieve Results Modal -->
+<div class="modal fade" id="retrieveModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Retrieve Your Results</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="retrieveForm">
+                    <div class="mb-3">
+                        <label for="retrieve_kcse_index" class="form-label">KCSE Index Number</label>
+                        <input type="text" class="form-control" id="retrieve_kcse_index" 
+                               placeholder="12345678912/2024" required>
+                        <div class="form-text">Format: 11 digits followed by /year</div>
                     </div>
-                    <div>
-                        <button class="btn btn-sm btn-light" onclick="logout()">
-                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                    
+                    <div class="mb-3">
+                        <label for="mpesa_receipt" class="form-label">M-Pesa Receipt Number</label>
+                        <input type="text" class="form-control" id="mpesa_receipt" 
+                               placeholder="ABC123XYZ45" required>
+                        <div class="form-text">10-digit code from your M-Pesa confirmation message</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="retrieveBtn">
+                            <i class="fas fa-search me-2"></i> Retrieve Results
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Cancel
                         </button>
                     </div>
-                </div>
+                </form>
                 
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Enter the KCSE index number and M-Pesa receipt number you used during payment.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+               
                 <!-- Payment Required Alert -->
                 <div id="paymentRequiredAlert" class="alert alert-warning" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center">
@@ -995,17 +1036,14 @@
                     </div>
                     
                     <!-- Action Buttons -->
-                    <div class="text-center mt-5 mb-4">
-                        <button type="submit" class="btn btn-calculate me-3" id="calculateBtn" disabled>
-                            <i class="fas fa-calculator me-2"></i> Calculate Cluster Points
-                        </button>
-                        <button type="button" class="btn btn-reset" onclick="resetForm()">
-                            <i class="fas fa-redo me-2"></i> Reset Form
-                        </button>
-                        <button type="button" class="btn btn-register" onclick="showRegistrationModal()" id="registerButton">
-                            <i class="fas fa-credit-card me-2"></i> Register & Pay
-                        </button>
-                    </div>
+                   <div class="text-center mt-5 mb-4">
+    <button type="submit" class="btn btn-calculate me-3" id="calculateBtn">
+        <i class="fas fa-calculator me-2"></i> Calculate Cluster Points
+    </button>
+    <button type="button" class="btn btn-reset" onclick="resetForm()">
+        <i class="fas fa-redo me-2"></i> Reset Form
+    </button>
+</div>
                 </form>
                 
                 <!-- Results Section -->
@@ -1078,211 +1116,190 @@
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Global variables
-        let paymentCheckInterval = null;
-        let checkoutRequestId = null;
-        let userData = null;
+    // Global variables
+    let paymentCheckInterval = null;
+    let checkoutRequestId = null;
+    let userData = null;
 
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            checkUserStatus();
-        });
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Remove user status check since we don't need login anymore
+        updateUI();
+    });
 
-        // Show loading spinner
-        function showLoading(show = true) {
-            const spinner = document.getElementById('loadingSpinner');
-            spinner.style.display = show ? 'flex' : 'none';
-        }
+    // Show loading spinner
+    function showLoading(show = true) {
+        const spinner = document.getElementById('loadingSpinner');
+        spinner.style.display = show ? 'flex' : 'none';
+    }
 
-        // Reset form
-        function resetForm() {
-            document.getElementById('gradesForm').reset();
-            document.getElementById('resultsSection').style.display = 'none';
-            document.getElementById('calculateBtn').disabled = userData ? false : true;
-        }
+    // Reset form
+    function resetForm() {
+        document.getElementById('gradesForm').reset();
+        document.getElementById('resultsSection').style.display = 'none';
+        document.getElementById('calculateBtn').disabled = false; // Always enabled
+    }
 
-        // Show registration modal
-        function showRegistrationModal() {
-            const modal = new bootstrap.Modal(document.getElementById('registrationModal'));
-            modal.show();
-        }
+    // Show registration modal
+    function showRegistrationModal() {
+        const modal = new bootstrap.Modal(document.getElementById('registrationModal'));
+        modal.show();
+    }
 
-        // Logout user
-        async function logout() {
-            try {
-                const response = await fetch('/logout', {
-                    method: 'GET',
-                    credentials: 'same-origin'
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    userData = null;
-                    updateUI();
-                    alert('Logged out successfully');
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-            }
-        }
+    // Show retrieve modal
+    function showRetrieveModal() {
+        const modal = new bootstrap.Modal(document.getElementById('retrieveModal'));
+        modal.show();
+    }
 
-        // Check user status
-        async function checkUserStatus() {
-            try {
-                const response = await fetch('/my_results', {
-                    credentials: 'same-origin'
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        userData = {
-                            kcse_index: data.kcse_index,
-                            email: data.email,
-                            payment_status: 'completed'
-                        };
-                    }
-                }
-            } catch (error) {
-                // User not logged in
-                console.log('User not logged in');
-            } finally {
-                updateUI();
-            }
-        }
+    // Update UI based on user status
+    function updateUI() {
+        const calculateBtn = document.getElementById('calculateBtn');
+        // Always enable calculate button since we removed login requirement
+        calculateBtn.disabled = false;
+    }
 
-        // Update UI based on user status
-        function updateUI() {
-            const userInfoBar = document.getElementById('userInfoBar');
-            const paymentRequiredAlert = document.getElementById('paymentRequiredAlert');
-            const calculateBtn = document.getElementById('calculateBtn');
-            const registerButton = document.getElementById('registerButton');
+    // Format cluster points with color coding
+    function formatClusterPoints(points) {
+        const num = parseFloat(points);
+        if (num >= 30) return '<span class="points-high">' + points + '</span>';
+        if (num >= 15) return '<span class="points-medium">' + points + '</span>';
+        if (num > 0) return points;
+        return '<span class="points-zero">0.000</span>';
+    }
 
-            if (userData && userData.payment_status === 'completed') {
-                // User is logged in and paid
-                userInfoBar.style.display = 'flex';
-                document.getElementById('userKcseIndex').textContent = userData.kcse_index;
-                document.getElementById('userEmail').textContent = userData.email;
-                paymentRequiredAlert.style.display = 'none';
-                calculateBtn.disabled = false;
-                registerButton.style.display = 'none';
-            } else {
-                // User not logged in or not paid
-                userInfoBar.style.display = 'none';
-                paymentRequiredAlert.style.display = 'block';
-                calculateBtn.disabled = true;
-                registerButton.style.display = 'inline-block';
-            }
-        }
-
-        // Format cluster points with color coding
-        function formatClusterPoints(points) {
-            const num = parseFloat(points);
-            if (num >= 30) return '<span class="points-high">' + points + '</span>';
-            if (num >= 15) return '<span class="points-medium">' + points + '</span>';
-            if (num > 0) return points;
-            return '<span class="points-zero">0.000</span>';
-        }
-
-        // Show cluster details modal
-        function showClusterDetails(clusterId, clusterName, points, subjectsUsed) {
-            const modalTitle = document.getElementById('modalTitle');
-            const modalContent = document.getElementById('modalContent');
+    // Show cluster details modal
+    function showClusterDetails(clusterId, clusterName, points, subjectsUsed) {
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        
+        modalTitle.textContent = `${clusterName} Details`;
+        
+        let html = `
+            <div class="mb-3">
+                <h5>${clusterName}</h5>
+                <p>Cluster Points: <strong>${points}</strong></p>
+            </div>
+        `;
+        
+        if (subjectsUsed && subjectsUsed.length > 0) {
+            html += `<h6 class="mb-3"><i class="fas fa-book"></i> Subjects Used:</h6>
+            <div class="subject-details">`;
             
-            modalTitle.textContent = `${clusterName} Details`;
+            let totalPoints = 0;
+            subjectsUsed.forEach((subject, index) => {
+                const gradeClass = `grade-${subject.grade ? subject.grade.charAt(0) : 'E'}`;
+                html += `<div class="subject-detail-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="subject-grade">${subject.subject ? subject.subject.replace('_', ' ').toUpperCase() : 'Unknown'}</span>
+                            <span class="badge ${gradeClass} subject-badge">${subject.grade || 'E'}</span>
+                            ${subject.requirement ? `<span class="requirement-badge">${subject.requirement}</span>` : ''}
+                        </div>
+                        <div class="subject-points">${subject.points || 0} points</div>
+                    </div>
+                </div>`;
+                totalPoints += subject.points || 0;
+            });
             
-            let html = `
-                <div class="mb-3">
-                    <h5>${clusterName}</h5>
-                    <p>Cluster Points: <strong>${points}</strong></p>
+            html += `</div>
+            <div class="mt-3 p-3 bg-light rounded">
+                <strong>Total Cluster Points (x):</strong> ${totalPoints} / 48
+            </div>`;
+        }
+        
+        modalContent.innerHTML = html;
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('clusterDetailsModal'));
+        modal.show();
+    }
+
+    // Display results
+    function displayResults(data) {
+        const resultsSection = document.getElementById('resultsSection');
+        const clusterGrid = document.getElementById('clusterGrid');
+        const aggregateDisplay = document.getElementById('aggregateDisplay');
+        const topClustersSection = document.getElementById('topClustersSection');
+        const topClustersGrid = document.getElementById('topClustersGrid');
+        
+        // Show results section
+        resultsSection.style.display = 'block';
+        
+        // Display aggregate points
+        if (data.aggregate_points) {
+            aggregateDisplay.innerHTML = `
+                <div>Aggregate Points (y): <strong>${data.aggregate_points} / 84</strong></div>
+                <div>Top 7 Subjects: ${data.top_7_subjects ? data.top_7_subjects.map(s => `${s.subject ? s.subject.replace('_', ' ') : ''} (${s.points})`).join(', ') : 'None'}</div>
+            `;
+        }
+        
+        // Clear previous results
+        clusterGrid.innerHTML = '';
+        topClustersGrid.innerHTML = '';
+        
+        // Sort clusters by points (descending) for display
+        const clusters = [];
+        for (let i = 1; i <= 20; i++) {
+            const clusterKey = `Cluster ${i}`;
+            if (data.results && data.results[clusterKey]) {
+                const points = parseFloat(data.results[clusterKey]);
+                clusters.push({
+                    id: i,
+                    name: clusterKey,
+                    points: points,
+                    pointsFormatted: data.results[clusterKey],
+                    description: data.details && data.details[clusterKey] ? data.details[clusterKey].description : ''
+                });
+            }
+        }
+        
+        // Sort by points descending
+        clusters.sort((a, b) => b.points - a.points);
+        
+        // Get top 3 clusters
+        const topClusters = clusters.slice(0, 3);
+        
+        // Display all clusters
+        clusters.forEach((cluster, index) => {
+            const cardClass = cluster.points === 0 ? 'zero' : (cluster.points >= 30 ? 'highlight' : '');
+            const pointsDisplay = formatClusterPoints(cluster.pointsFormatted);
+            
+            const clusterCard = document.createElement('div');
+            clusterCard.className = `cluster-card ${cardClass}`;
+            clusterCard.onclick = () => {
+                const details = data.details && data.details[`Cluster ${cluster.id}`];
+                if (details) {
+                    showClusterDetails(
+                        cluster.id,
+                        cluster.name,
+                        cluster.pointsFormatted,
+                        details.subjects_used
+                    );
+                }
+            };
+            
+            clusterCard.innerHTML = `
+                <div class="cluster-header">
+                    <div class="cluster-number">${cluster.id}</div>
+                    <div class="cluster-points">${pointsDisplay}</div>
                 </div>
+                <div class="cluster-name">${cluster.name}</div>
+                <div class="cluster-description">${cluster.description}</div>
+                <div class="cluster-subjects" id="subjects-${cluster.id}"></div>
             `;
             
-            if (subjectsUsed && subjectsUsed.length > 0) {
-                html += `<h6 class="mb-3"><i class="fas fa-book"></i> Subjects Used:</h6>
-                <div class="subject-details">`;
-                
-                let totalPoints = 0;
-                subjectsUsed.forEach((subject, index) => {
-                    const gradeClass = `grade-${subject.grade ? subject.grade.charAt(0) : 'E'}`;
-                    html += `<div class="subject-detail-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="subject-grade">${subject.subject ? subject.subject.replace('_', ' ').toUpperCase() : 'Unknown'}</span>
-                                <span class="badge ${gradeClass} subject-badge">${subject.grade || 'E'}</span>
-                                ${subject.requirement ? `<span class="requirement-badge">${subject.requirement}</span>` : ''}
-                            </div>
-                            <div class="subject-points">${subject.points || 0} points</div>
-                        </div>
-                    </div>`;
-                    totalPoints += subject.points || 0;
-                });
-                
-                html += `</div>
-                <div class="mt-3 p-3 bg-light rounded">
-                    <strong>Total Cluster Points (x):</strong> ${totalPoints} / 48
-                </div>`;
-            }
-            
-            modalContent.innerHTML = html;
-            
-            // Show the modal
-            const modal = new bootstrap.Modal(document.getElementById('clusterDetailsModal'));
-            modal.show();
-        }
-
-        // Display results
-        function displayResults(data) {
-            const resultsSection = document.getElementById('resultsSection');
-            const clusterGrid = document.getElementById('clusterGrid');
-            const aggregateDisplay = document.getElementById('aggregateDisplay');
-            const topClustersSection = document.getElementById('topClustersSection');
-            const topClustersGrid = document.getElementById('topClustersGrid');
-            
-            // Show results section
-            resultsSection.style.display = 'block';
-            
-            // Display aggregate points
-            if (data.aggregate_points) {
-                aggregateDisplay.innerHTML = `
-                    <div>Aggregate Points (y): <strong>${data.aggregate_points} / 84</strong></div>
-                    <div>Top 7 Subjects: ${data.top_7_subjects ? data.top_7_subjects.map(s => `${s.subject ? s.subject.replace('_', ' ') : ''} (${s.points})`).join(', ') : 'None'}</div>
-                `;
-            }
-            
-            // Clear previous results
-            clusterGrid.innerHTML = '';
-            topClustersGrid.innerHTML = '';
-            
-            // Sort clusters by points (descending) for display
-            const clusters = [];
-            for (let i = 1; i <= 20; i++) {
-                const clusterKey = `Cluster ${i}`;
-                if (data.results && data.results[clusterKey]) {
-                    const points = parseFloat(data.results[clusterKey]);
-                    clusters.push({
-                        id: i,
-                        name: clusterKey,
-                        points: points,
-                        pointsFormatted: data.results[clusterKey],
-                        description: data.details && data.details[clusterKey] ? data.details[clusterKey].description : ''
-                    });
-                }
-            }
-            
-            // Sort by points descending
-            clusters.sort((a, b) => b.points - a.points);
-            
-            // Get top 3 clusters
-            const topClusters = clusters.slice(0, 3);
-            
-            // Display all clusters
-            clusters.forEach((cluster, index) => {
-                const cardClass = cluster.points === 0 ? 'zero' : (cluster.points >= 30 ? 'highlight' : '');
+            clusterGrid.appendChild(clusterCard);
+        });
+        
+        // Display top clusters if any
+        if (topClusters.length > 0) {
+            topClustersSection.style.display = 'block';
+            topClusters.forEach(cluster => {
                 const pointsDisplay = formatClusterPoints(cluster.pointsFormatted);
                 
                 const clusterCard = document.createElement('div');
-                clusterCard.className = `cluster-card ${cardClass}`;
+                clusterCard.className = 'cluster-card highlight';
                 clusterCard.onclick = () => {
                     const details = data.details && data.details[`Cluster ${cluster.id}`];
                     if (details) {
@@ -1302,301 +1319,389 @@
                     </div>
                     <div class="cluster-name">${cluster.name}</div>
                     <div class="cluster-description">${cluster.description}</div>
-                    <div class="cluster-subjects" id="subjects-${cluster.id}"></div>
+                    <div class="text-center mt-2">
+                        <span class="badge bg-success"><i class="fas fa-trophy me-1"></i> Top ${clusters.indexOf(cluster) + 1}</span>
+                    </div>
                 `;
                 
-                clusterGrid.appendChild(clusterCard);
+                topClustersGrid.appendChild(clusterCard);
+            });
+        } else {
+            topClustersSection.style.display = 'none';
+        }
+        
+        // Scroll to results
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Sort clusters
+    function sortClusters(sortType) {
+        const clusterGrid = document.getElementById('clusterGrid');
+        const clusters = Array.from(clusterGrid.getElementsByClassName('cluster-card'));
+        const sortButtons = document.querySelectorAll('.sort-btn');
+        
+        // Update active button
+        sortButtons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        clusters.sort((a, b) => {
+            const aId = parseInt(a.querySelector('.cluster-number').textContent);
+            const bId = parseInt(b.querySelector('.cluster-number').textContent);
+            const aPoints = parseFloat(a.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
+            const bPoints = parseFloat(b.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
+            
+            switch (sortType) {
+                case 'number':
+                    return aId - bId;
+                case 'points':
+                    return bPoints - aPoints;
+                case 'non-zero':
+                    if (aPoints === 0 && bPoints > 0) return 1;
+                    if (aPoints > 0 && bPoints === 0) return -1;
+                    return bPoints - aPoints;
+                default:
+                    return aId - bId;
+            }
+        });
+        
+        // Reorder clusters
+        clusters.forEach(cluster => clusterGrid.appendChild(cluster));
+        
+        // For non-zero filter, hide/show
+        if (sortType === 'non-zero') {
+            clusters.forEach(cluster => {
+                const points = parseFloat(cluster.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
+                cluster.style.display = points === 0 ? 'none' : 'block';
+            });
+        } else {
+            clusters.forEach(cluster => cluster.style.display = 'block');
+        }
+    }
+
+    // Handle registration form submission
+    document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const registerBtn = document.getElementById('registerBtn');
+        const originalText = registerBtn.innerHTML;
+        registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+        registerBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    kcse_index: document.getElementById('kcse_index').value,
+                    email: document.getElementById('email').value,
+                    phone_number: document.getElementById('phone_number').value
+                })
             });
             
-            // Display top clusters if any
-            if (topClusters.length > 0) {
-                topClustersSection.style.display = 'block';
-                topClusters.forEach(cluster => {
-                    const pointsDisplay = formatClusterPoints(cluster.pointsFormatted);
-                    
-                    const clusterCard = document.createElement('div');
-                    clusterCard.className = 'cluster-card highlight';
-                    clusterCard.onclick = () => {
-                        const details = data.details && data.details[`Cluster ${cluster.id}`];
-                        if (details) {
-                            showClusterDetails(
-                                cluster.id,
-                                cluster.name,
-                                cluster.pointsFormatted,
-                                details.subjects_used
-                            );
-                        }
-                    };
-                    
-                    clusterCard.innerHTML = `
-                        <div class="cluster-header">
-                            <div class="cluster-number">${cluster.id}</div>
-                            <div class="cluster-points">${pointsDisplay}</div>
-                        </div>
-                        <div class="cluster-name">${cluster.name}</div>
-                        <div class="cluster-description">${cluster.description}</div>
-                        <div class="text-center mt-2">
-                            <span class="badge bg-success"><i class="fas fa-trophy me-1"></i> Top ${clusters.indexOf(cluster) + 1}</span>
-                        </div>
-                    `;
-                    
-                    topClustersGrid.appendChild(clusterCard);
-                });
+            const data = await response.json();
+            
+            if (data.success) {
+                // Close registration modal
+                const registrationModal = bootstrap.Modal.getInstance(document.getElementById('registrationModal'));
+                registrationModal.hide();
+                
+                // Show payment modal
+                checkoutRequestId = data.checkout_request_id;
+                const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                paymentModal.show();
+                
+                // Start checking payment status
+                checkPaymentStatus();
             } else {
-                topClustersSection.style.display = 'none';
-            }
-            
-            // Scroll to results
-            resultsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Sort clusters
-        function sortClusters(sortType) {
-            const clusterGrid = document.getElementById('clusterGrid');
-            const clusters = Array.from(clusterGrid.getElementsByClassName('cluster-card'));
-            const sortButtons = document.querySelectorAll('.sort-btn');
-            
-            // Update active button
-            sortButtons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            clusters.sort((a, b) => {
-                const aId = parseInt(a.querySelector('.cluster-number').textContent);
-                const bId = parseInt(b.querySelector('.cluster-number').textContent);
-                const aPoints = parseFloat(a.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
-                const bPoints = parseFloat(b.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
-                
-                switch (sortType) {
-                    case 'number':
-                        return aId - bId;
-                    case 'points':
-                        return bPoints - aPoints;
-                    case 'non-zero':
-                        if (aPoints === 0 && bPoints > 0) return 1;
-                        if (aPoints > 0 && bPoints === 0) return -1;
-                        return bPoints - aPoints;
-                    default:
-                        return aId - bId;
-                }
-            });
-            
-            // Reorder clusters
-            clusters.forEach(cluster => clusterGrid.appendChild(cluster));
-            
-            // For non-zero filter, hide/show
-            if (sortType === 'non-zero') {
-                clusters.forEach(cluster => {
-                    const points = parseFloat(cluster.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
-                    cluster.style.display = points === 0 ? 'none' : 'block';
-                });
-            } else {
-                clusters.forEach(cluster => cluster.style.display = 'block');
-            }
-        }
-
-        // Handle registration form submission
-        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const registerBtn = document.getElementById('registerBtn');
-            const originalText = registerBtn.innerHTML;
-            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
-            registerBtn.disabled = true;
-            
-            try {
-                const response = await fetch('/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        kcse_index: document.getElementById('kcse_index').value,
-                        email: document.getElementById('email').value,
-                        phone_number: document.getElementById('phone_number').value
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Close registration modal
-                    const registrationModal = bootstrap.Modal.getInstance(document.getElementById('registrationModal'));
-                    registrationModal.hide();
-                    
-                    // Show payment modal
-                    checkoutRequestId = data.checkout_request_id;
-                    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
-                    paymentModal.show();
-                    
-                    // Start checking payment status
-                    checkPaymentStatus();
-                } else {
-                    alert('Registration failed: ' + data.error);
-                    registerBtn.innerHTML = originalText;
-                    registerBtn.disabled = false;
-                }
-            } catch (error) {
-                alert('Network error: ' + error.message);
+                alert('Registration failed: ' + data.error);
                 registerBtn.innerHTML = originalText;
                 registerBtn.disabled = false;
             }
-        });
-
-        // Check payment status
-        async function checkPaymentStatus() {
-            if (!checkoutRequestId) return;
-            
-            const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
-            const paymentStatusText = document.getElementById('paymentStatusText');
-            const paymentInstructions = document.getElementById('paymentInstructions');
-            const paymentSuccess = document.getElementById('paymentSuccess');
-            const paymentError = document.getElementById('paymentError');
-            
-            paymentCheckInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`/check_payment/${checkoutRequestId}`, {
-                        credentials: 'same-origin'
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        if (data.status === 'completed') {
-                            clearInterval(paymentCheckInterval);
-                            paymentStatusText.textContent = 'Payment Successful!';
-                            paymentInstructions.style.display = 'none';
-                            paymentSuccess.style.display = 'block';
-                            
-                            // Update user status
-                            userData = {
-                                kcse_index: document.getElementById('kcse_index').value,
-                                email: document.getElementById('email').value,
-                                payment_status: 'completed'
-                            };
-                            
-                            // Update UI after 2 seconds
-                            setTimeout(() => {
-                                paymentModal.hide();
-                                updateUI();
-                            }, 2000);
-                            
-                        } else if (data.status === 'failed') {
-                            clearInterval(paymentCheckInterval);
-                            paymentStatusText.textContent = 'Payment Failed';
-                            paymentInstructions.style.display = 'none';
-                            paymentError.style.display = 'block';
-                            document.getElementById('errorMessage').textContent = data.error || 'Payment failed. Please try again.';
-                        } else {
-                            // Still pending
-                            paymentInstructions.textContent = 'Please check your phone and enter your M-Pesa PIN to complete payment...';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error checking payment:', error);
-                }
-            }, 3000); // Check every 3 seconds
-            
-            // Stop checking after 5 minutes
-            setTimeout(() => {
-                if (paymentCheckInterval) {
-                    clearInterval(paymentCheckInterval);
-                    paymentStatusText.textContent = 'Payment Timeout';
-                    paymentInstructions.textContent = 'Payment timed out. Please try again.';
-                }
-            }, 300000); // 5 minutes
+        } catch (error) {
+            alert('Network error: ' + error.message);
+            registerBtn.innerHTML = originalText;
+            registerBtn.disabled = false;
         }
+    });
 
-        // Handle grades form submission
-        document.getElementById('gradesForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Check if user is logged in and paid
-            if (!userData || userData.payment_status !== 'completed') {
-                alert('Please register and complete payment first.');
-                showRegistrationModal();
-                return;
-            }
-            
-            // Collect form data
-            const formData = new FormData(this);
-            const grades = {};
-            
-            // Convert FormData to object
-            formData.forEach((value, key) => {
-                if (value && value !== 'Select Grade') {
-                    grades[key] = value.toUpperCase();
-                }
-            });
-            
-            // Check if at least Mathematics and English are filled
-            if (!grades.mathematics || !grades.english) {
-                alert('Please enter grades for at least Mathematics and English.');
-                return;
-            }
-            
-            // Show loading spinner
-            showLoading(true);
-            
+    // Check payment status
+    async function checkPaymentStatus() {
+        if (!checkoutRequestId) return;
+        
+        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+        const paymentStatusText = document.getElementById('paymentStatusText');
+        const paymentInstructions = document.getElementById('paymentInstructions');
+        const paymentSuccess = document.getElementById('paymentSuccess');
+        const paymentError = document.getElementById('paymentError');
+        
+        paymentCheckInterval = setInterval(async () => {
             try {
-                // Send data to backend
-                const response = await fetch('/calculate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify(grades)
+                const response = await fetch(`/check_payment/${checkoutRequestId}`, {
+                    credentials: 'same-origin'
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayResults(data);
-                    
-                    // Show warning if not enough subjects
-                    if (data.warning) {
-                        const warningAlert = document.createElement('div');
-                        warningAlert.className = 'alert alert-warning mt-3';
-                        warningAlert.innerHTML = `
-                            <i class="fas fa-exclamation-triangle"></i> 
-                            <strong>Note:</strong> ${data.warning}
-                        `;
-                        document.getElementById('resultsSection').prepend(warningAlert);
-                    }
-                } else {
-                    if (data.error && data.error.includes('Payment required')) {
-                        alert('Payment required. Please complete payment first.');
-                        showRegistrationModal();
+                    if (data.status === 'completed') {
+                        clearInterval(paymentCheckInterval);
+                        
+                        // Update payment modal to redirect to grade entry
+                        paymentStatusText.textContent = 'Payment Successful!';
+                        paymentInstructions.style.display = 'none';
+                        paymentSuccess.style.display = 'block';
+                        
+                        // Update success button to go directly to grade entry
+                        const successBtn = paymentSuccess.querySelector('button');
+                        successBtn.innerHTML = '<i class="fas fa-calculator me-2"></i> Enter Grades Now';
+                        successBtn.onclick = function() {
+                            paymentModal.hide();
+                            
+                            // Scroll to the form
+                            document.getElementById('gradesForm').scrollIntoView({ behavior: 'smooth' });
+                            
+                            // Highlight the form area
+                            const formContainer = document.querySelector('.card-body');
+                            formContainer.style.boxShadow = '0 0 20px rgba(46, 125, 50, 0.5)';
+                            formContainer.style.transition = 'box-shadow 0.5s';
+                            
+                            // Focus on first input field
+                            setTimeout(() => {
+                                document.getElementById('mathematics').focus();
+                            }, 500);
+                            
+                            // Show success message
+                            showSuccessMessage('Payment confirmed! Please enter your KCSE grades to calculate cluster points.');
+                            
+                            // Remove highlight after 3 seconds
+                            setTimeout(() => {
+                                formContainer.style.boxShadow = '';
+                            }, 3000);
+                        };
+                        
+                    } else if (data.status === 'failed') {
+                        clearInterval(paymentCheckInterval);
+                        paymentStatusText.textContent = 'Payment Failed';
+                        paymentInstructions.style.display = 'none';
+                        paymentError.style.display = 'block';
+                        document.getElementById('errorMessage').textContent = data.error || 'Payment failed. Please try again.';
                     } else {
-                        alert('Error calculating points: ' + (data.error || 'Unknown error'));
+                        // Still pending
+                        paymentInstructions.textContent = 'Please check your phone and enter your M-Pesa PIN to complete payment...';
                     }
                 }
             } catch (error) {
-                alert('Network error: ' + error.message);
-                console.error('Error:', error);
-            } finally {
-                showLoading(false);
+                console.error('Error checking payment:', error);
+            }
+        }, 3000); // Check every 3 seconds
+        
+        // Stop checking after 5 minutes
+        setTimeout(() => {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentStatusText.textContent = 'Payment Timeout';
+                paymentInstructions.textContent = 'Payment timed out. Please try again.';
+            }
+        }, 300000); // 5 minutes
+    }
+
+    // Show success message
+    function showSuccessMessage(message) {
+        // Remove any existing success messages
+        const existingAlerts = document.querySelectorAll('.alert-success');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Create new success alert
+        const successAlert = document.createElement('div');
+        successAlert.className = 'alert alert-success alert-dismissible fade show';
+        successAlert.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>${message}</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert after the form title
+        const formTitle = document.querySelector('h3');
+        formTitle.parentNode.insertBefore(successAlert, formTitle.nextSibling);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (successAlert.parentNode) {
+                successAlert.remove();
+            }
+        }, 5000);
+    }
+
+    // Handle retrieve form submission
+    document.getElementById('retrieveForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const retrieveBtn = document.getElementById('retrieveBtn');
+        const originalText = retrieveBtn.innerHTML;
+        retrieveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Retrieving...';
+        retrieveBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/retrieve_results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    kcse_index: document.getElementById('retrieve_kcse_index').value,
+                    mpesa_receipt: document.getElementById('mpesa_receipt').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Close retrieve modal
+                const retrieveModal = bootstrap.Modal.getInstance(document.getElementById('retrieveModal'));
+                retrieveModal.hide();
+                
+                // Populate the form with retrieved grades
+                if (data.grades) {
+                    populateFormWithGrades(data.grades);
+                    
+                    // Calculate and display results immediately
+                    setTimeout(() => {
+                        calculateAndDisplayRetrievedResults(data);
+                    }, 500);
+                }
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (error) {
+            alert('Network error: ' + error.message);
+        } finally {
+            retrieveBtn.innerHTML = originalText;
+            retrieveBtn.disabled = false;
+        }
+    });
+
+    // Populate form with retrieved grades
+    function populateFormWithGrades(grades) {
+        for (const [subject, grade] of Object.entries(grades)) {
+            const selectElement = document.getElementById(subject);
+            if (selectElement && grade) {
+                selectElement.value = grade;
+            }
+        }
+    }
+
+    // Calculate and display retrieved results
+    function calculateAndDisplayRetrievedResults(data) {
+        // Show loading
+        showLoading(true);
+        
+        // Use the already calculated results from the server
+        if (data.results) {
+            // Create a display-ready data structure
+            const displayData = {
+                results: data.results,
+                aggregate_points: data.aggregate_points,
+                top_7_subjects: data.top_7_subjects,
+                details: {} // We don't have detailed subject breakdown from retrieve
+            };
+            
+            // Display results
+            displayResults(displayData);
+            
+            // Show success message
+            showSuccessMessage(`Results retrieved for ${data.kcse_index}`);
+        }
+        
+        // Hide loading
+        showLoading(false);
+    }
+
+    // Handle grades form submission
+    document.getElementById('gradesForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Collect form data
+        const formData = new FormData(this);
+        const grades = {};
+        
+        // Convert FormData to object
+        formData.forEach((value, key) => {
+            if (value && value !== 'Select Grade') {
+                grades[key] = value.toUpperCase();
             }
         });
-
-        // Download results as PDF
-        function downloadResults() {
-            alert('PDF download feature will be implemented in the backend. Results are saved to your account.');
-            // This would typically call a backend endpoint to generate PDF
-            // window.open('/download_results', '_blank');
+        
+        // Check if at least Mathematics and English are filled
+        if (!grades.mathematics || !grades.english) {
+            alert('Please enter grades for at least Mathematics and English.');
+            return;
         }
+        
+        // Show loading spinner
+        showLoading(true);
+        
+        try {
+            // Send data to backend
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(grades)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                displayResults(data);
+                
+                // Show warning if not enough subjects
+                if (data.warning) {
+                    const warningAlert = document.createElement('div');
+                    warningAlert.className = 'alert alert-warning mt-3';
+                    warningAlert.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        <strong>Note:</strong> ${data.warning}
+                    `;
+                    document.getElementById('resultsSection').prepend(warningAlert);
+                }
+            } else {
+                if (data.error && data.error.includes('Payment required')) {
+                    alert('Payment required. Please complete payment first.');
+                    showRegistrationModal();
+                } else {
+                    alert('Error calculating points: ' + (data.error || 'Unknown error'));
+                }
+            }
+        } catch (error) {
+            alert('Network error: ' + error.message);
+            console.error('Error:', error);
+        } finally {
+            showLoading(false);
+        }
+    });
 
-        // Initialize sort buttons
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set up sort buttons
-            const sortButtons = document.querySelectorAll('.sort-btn');
-            sortButtons.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    sortButtons.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
+    // Download results as PDF
+    function downloadResults() {
+        alert('PDF download feature will be implemented in the backend. Results are saved to your account.');
+        // This would typically call a backend endpoint to generate PDF
+        // window.open('/download_results', '_blank');
+    }
+
+    // Initialize sort buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up sort buttons
+        const sortButtons = document.querySelectorAll('.sort-btn');
+        sortButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                sortButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
             });
         });
-    </script>
+    });
+</script>
 </body>
 </html>
