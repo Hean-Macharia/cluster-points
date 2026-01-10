@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, send_from_directory, session
 from datetime import datetime, timedelta
 import math
 import json
@@ -61,14 +61,652 @@ MPESA_CONFIG = {
 PAYMENT_AMOUNT = int(os.getenv('PAYMENT_AMOUNT', 100))
 PAYMENT_PURPOSE = os.getenv('PAYMENT_PURPOSE', 'KCSE Cluster Points Calculation')
 
-# Grade to points mapping
+# Grade to points mapping (Kenya KCSE)
 GRADE_POINTS = {
     'A': 12, 'A-': 11, 'B+': 10, 'B': 9, 'B-': 8,
     'C+': 7, 'C': 6, 'C-': 5, 'D+': 4, 'D': 3,
     'D-': 2, 'E': 1
 }
 
-# Helper functions for KCSE calculation
+# Subject groups mapping - COMPLETE KCSE coverage
+SUBJECT_GROUPS = {
+    'Group I': ['english', 'kiswahili', 'mathematics'],
+    'Group II': ['biology', 'physics', 'chemistry', 'general_science'],
+    'Group III': ['history', 'geography', 'cre', 'ire', 'hre'],
+    'Group IV': [
+        'agriculture', 'computer', 'arts', 'woodwork', 'metalwork', 
+        'building', 'electronics', 'homescience', 'aviation',
+        'drawing_design', 'power_mechanics'
+    ],
+    'Group V': [
+        'french', 'german', 'arabic', 'kenya_sign_language', 
+        'music', 'business'
+    ]
+}
+
+# Subject name mapping for normalization (form fields to internal names)
+SUBJECT_NAME_MAP = {
+    'mathematics': 'mathematics',
+    'english': 'english',
+    'kiswahili': 'kiswahili',
+    'physics': 'physics',
+    'chemistry': 'chemistry',
+    'biology': 'biology',
+    'geography': 'geography',
+    'history': 'history',
+    'cre': 'cre',
+    'ire': 'ire',
+    'hre': 'hre',
+    'general_science': 'general_science',
+    'homescience': 'homescience',
+    'music': 'music',
+    'french': 'french',
+    'german': 'german',
+    'arabic': 'arabic',
+    'kenya_sign_language': 'kenya_sign_language',
+    'business': 'business',
+    'agriculture': 'agriculture',
+    'computer': 'computer',
+    'arts': 'arts',
+    'woodwork': 'woodwork',
+    'metalwork': 'metalwork',
+    'building': 'building',
+    'electronics': 'electronics',
+    'aviation': 'aviation',
+    'drawing_design': 'drawing_design',
+    'power_mechanics': 'power_mechanics',
+    # Aliases
+    'mathematics_a': 'mathematics',
+    'mathematics_b': 'mathematics',
+    'home_science': 'homescience',
+    'art': 'arts',
+    'art_and_design': 'arts',
+    'building_construction': 'building',
+    'electricity': 'electronics',
+    'electricity_electronics': 'electronics'
+}
+
+# Cluster definitions - Updated with complete requirements
+CLUSTERS = {
+    1: {
+        'name': 'Cluster 1',
+        'description': 'Law',
+        'requirements': [
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    2: {
+        'name': 'Cluster 2',
+        'description': 'Business and Hospitality Related',
+        'requirements': [
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    3: {
+        'name': 'Cluster 3',
+        'description': 'Social Sciences And Arts',
+        'requirements': [
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    4: {
+        'name': 'Cluster 4',
+        'description': 'Geosciences',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology', 'chemistry', 'geography'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    5: {
+        'name': 'Cluster 5',
+        'description': 'Engineering, Technology ',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    6: {
+        'name': 'Cluster 6',
+        'description': 'Architecture , Building Construction',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    7: {
+        'name': 'Cluster 7',
+        'description': 'Computing , IT related',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['2nd_group_ii', 'any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    8: {
+        'name': 'Cluster 8',
+        'description': 'Agribusiness',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics', 'chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    9: {
+        'name': 'Cluster 9',
+        'description': 'General Sciences',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    10: {
+        'name': 'Cluster 10',
+        'description': 'Acturial science',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    11: {
+        'name': 'Cluster 11',
+        'description': 'Interior Design',
+        'requirements': [
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology', 'homescience'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    12: {
+        'name': 'Cluster 12',
+        'description': 'Sport Science ',
+        'requirements': [
+            {'subjects': ['biology', 'general_science'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['english', 'kiswahili', 'any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    13: {
+        'name': 'Cluster 13',
+        'description': 'Medicine',
+        'requirements': [
+            {'subjects': ['biology'], 'type': 'specific', 'count': 1},
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili', '3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    14: {
+        'name': 'Cluster 14',
+        'description': 'History',
+        'requirements': [
+            {'subjects': [], 'type': 'special', 'group': 'III', 'min_grade': 'C+'},  # HAG – C+
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    15: {
+        'name': 'Cluster 15',
+        'description': 'Agriculture',
+        'requirements': [
+            {'subjects': ['biology'], 'type': 'specific', 'count': 1},
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'physics', 'geography'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili', '3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    16: {
+        'name': 'Cluster 16',
+        'description': 'Geography Focus',
+        'requirements': [
+            {'subjects': ['geography'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    17: {
+        'name': 'Cluster 17',
+        'description': 'French and German',
+        'requirements': [
+            {'subjects': ['french', 'german'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii', 'any_group_iii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv'], 'type': 'group', 'count': 1}
+        ]
+    },
+    18: {
+        'name': 'Cluster 18',
+        'description': 'Music and Arts',
+        'requirements': [
+            {'subjects': ['music'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii', 'any_group_iii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', '2nd_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    19: {
+        'name': 'Cluster 19',
+        'description': 'Education Related',
+        'requirements': [
+            {'subjects': ['english'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['2nd_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['kiswahili', '3rd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    20: {
+        'name': 'Cluster 20',
+        'description': 'Religious Studies',
+        'requirements': [
+            {'subjects': ['cre', 'ire', 'hre'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['2nd_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    }
+}
+
+# ===== HELPER FUNCTIONS =====
+
+def normalize_subject_name(subject):
+    """Normalize subject names to match form field names"""
+    return SUBJECT_NAME_MAP.get(subject.lower(), subject.lower())
+
+def get_subject_group(subject):
+    """Determine which group a subject belongs to"""
+    normalized = normalize_subject_name(subject)
+    for group, subjects in SUBJECT_GROUPS.items():
+        if normalized in subjects:
+            return group
+    return None
+
+def get_best_subjects_by_group(grades, group_name, count=1, exclude_subjects=None):
+    """Get best N subjects from a specific group, excluding already used subjects"""
+    if exclude_subjects is None:
+        exclude_subjects = []
+    
+    group_subjects = SUBJECT_GROUPS.get(group_name, [])
+    subject_points = []
+    
+    for subject in group_subjects:
+        if subject in grades and grades[subject]:
+            if subject in exclude_subjects:
+                continue
+            points = GRADE_POINTS.get(grades[subject], 0)
+            subject_points.append((subject, points, grades[subject]))
+    
+    # Sort by points (descending)
+    subject_points.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return top N subjects
+    return subject_points[:count]
+
+def get_aggregate_points(grades):
+    """
+    Calculate Aggregate Points (AGP) - sum of best 7 subjects ONLY
+    This is y in the formula: Cluster Points = sqrt((x/48) * (y/84)) * 48
+    """
+    all_points = []
+    
+    # Collect all subjects with valid grades
+    for subject, grade in grades.items():
+        if grade:
+            points = GRADE_POINTS.get(grade, 0)
+            all_points.append((subject, points))
+    
+    # Sort by points (descending)
+    all_points.sort(key=lambda x: x[1], reverse=True)
+    
+    # Take top 7 only - FIXED: Always take exactly top 7 or less
+    top_7 = all_points[:7]
+    
+    # Calculate sum of points for top 7 subjects
+    total_points = sum(p for _, p in top_7)
+    
+    return total_points, top_7
+
+def get_available_subjects_from_group(grades, group_name, exclude_subjects=None):
+    """Get all available subjects from a group that are not already used"""
+    if exclude_subjects is None:
+        exclude_subjects = []
+    
+    group_subjects = SUBJECT_GROUPS.get(group_name, [])
+    available = []
+    
+    for subject in group_subjects:
+        if subject in grades and grades[subject]:
+            if subject in exclude_subjects:
+                continue
+            points = GRADE_POINTS.get(grades[subject], 0)
+            available.append((subject, points, grades[subject]))
+    
+    # Sort by points (descending)
+    available.sort(key=lambda x: x[1], reverse=True)
+    return available
+
+def calculate_cluster_points(grades, cluster_id, debug=False):
+    """
+    Calculate cluster points using the formula:
+    Cluster Points = sqrt((x/48) * (y/84)) * 48
+    
+    Where:
+    x = sum of points in the 4 required cluster subjects (must be unique subjects)
+    y = Aggregate Points (AGP) = sum of the best 7 subjects (can include cluster subjects)
+    48 = maximum points possible in 4 subjects (12 × 4)
+    84 = maximum points possible in 7 subjects (12 × 7)
+    
+    Returns: (points, subjects_used, requirement_failures)
+    """
+    cluster = CLUSTERS.get(cluster_id)
+    if not cluster:
+        if debug:
+            print(f"Cluster {cluster_id} not found")
+        return 0.000, [], ["Cluster not found"]
+    
+    cluster_subjects_points = 0
+    subjects_used = []
+    requirement_details = []
+    requirement_failures = []
+    
+    if debug:
+        print(f"\n{'='*60}")
+        print(f"Calculating Cluster {cluster_id}: {cluster['name']}")
+        print(f"{'='*60}")
+    
+    for req_index, requirement in enumerate(cluster['requirements']):
+        req_type = requirement.get('type', 'specific')
+        req_subjects = requirement.get('subjects', [])
+        req_count = requirement.get('count', 1)
+        
+        if debug:
+            print(f"\nRequirement {req_index + 1}: {req_type}")
+            print(f"Subjects options: {req_subjects}")
+            print(f"Need to select: {req_count} subject(s)")
+            print(f"Already used subjects: {[s['subject'] for s in subjects_used]}")
+        
+        # Handle special requirements first
+        if req_type == 'special' and cluster_id == 14 and req_index == 0:
+            # HAG – C+ requirement - best Group III subject with at least C+
+            best_group_iii = get_best_subjects_by_group(grades, 'Group III', 1)
+            
+            if debug:
+                print(f"HAG C+ check - Best Group III subjects: {best_group_iii}")
+            
+            if best_group_iii and best_group_iii[0][1] >= GRADE_POINTS.get('C+', 0):
+                subject, points, grade = best_group_iii[0]
+                cluster_subjects_points += points
+                subjects_used.append({
+                    'subject': subject,
+                    'grade': grade,
+                    'points': points,
+                    'requirement': 'HAG C+ (Group III)',
+                    'group': 'Group III'
+                })
+                requirement_details.append(f"HAG C+: {subject} ({grade}) = {points} points")
+                
+                if debug:
+                    print(f"✓ HAG C+ satisfied with {subject} ({grade}) = {points} points")
+            else:
+                if debug:
+                    print(f"✗ HAG C+ requirement NOT met")
+                    if best_group_iii:
+                        print(f"  Best Group III subject: {best_group_iii[0][0]} with {best_group_iii[0][2]} (needs C+ or better)")
+                
+                requirement_failures.append(f"Requirement 1: No Group III subject with C+ or better")
+                return 0.000, subjects_used, requirement_failures
+            continue
+        
+        # For each requirement, we need to find subjects
+        found_subjects = []
+        found_points = 0
+        
+        if req_type in ['specific', 'specific_or_group']:
+            # Check specific subjects first
+            for subject_option in req_subjects:
+                normalized_option = normalize_subject_name(subject_option)
+                
+                if debug:
+                    print(f"Checking specific subject: {subject_option} -> {normalized_option}")
+                
+                # Check if this subject is available and not already used
+                if normalized_option in grades and grades[normalized_option]:
+                    # IMPORTANT: Check if subject is already used
+                    already_used = any(s['subject'] == normalized_option for s in subjects_used)
+                    
+                    if not already_used:
+                        points = GRADE_POINTS.get(grades[normalized_option], 0)
+                        found_subjects.append({
+                            'subject': normalized_option,
+                            'grade': grades[normalized_option],
+                            'points': points,
+                            'requirement': f"Specific: {subject_option}",
+                            'group': get_subject_group(normalized_option)
+                        })
+                        found_points += points
+                        
+                        if debug:
+                            print(f"✓ Found specific subject: {normalized_option} ({grades[normalized_option]}) = {points} points")
+                        
+                        if len(found_subjects) >= req_count:
+                            break
+                    else:
+                        if debug:
+                            print(f"✗ Subject {normalized_option} already used, skipping")
+        
+        # If not enough specific subjects found, check group requirements
+        if len(found_subjects) < req_count and req_type in ['group', 'specific_or_group']:
+            for subject_option in req_subjects:
+                if debug:
+                    print(f"Checking group option: {subject_option}")
+                
+                if subject_option.startswith('any_group_'):
+                    parts = subject_option.split('_')
+                    if len(parts) >= 3:
+                        group_num = parts[2].upper()
+                        group_name = f'Group {group_num}'
+                        
+                        # Get available subjects from this group (excluding already used ones)
+                        used_subject_names = [s['subject'] for s in subjects_used + found_subjects]
+                        available = get_best_subjects_by_group(grades, group_name, 
+                                                             req_count - len(found_subjects), 
+                                                             used_subject_names)
+                        
+                        if debug:
+                            print(f"Available from {group_name}: {available}")
+                        
+                        for subject, points, grade in available:
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"Group {group_num}: {subject_option}",
+                                'group': group_name
+                            })
+                            found_points += points
+                            
+                            if debug:
+                                print(f"✓ Added from group: {subject} ({grade}) = {points} points")
+                            
+                            if len(found_subjects) >= req_count:
+                                break
+                        if len(found_subjects) >= req_count:
+                            break
+                
+                elif subject_option.startswith('2nd_group_'):
+                    parts = subject_option.split('_')
+                    if len(parts) >= 3:
+                        group_num = parts[2].upper()
+                        group_name = f'Group {group_num}'
+                        
+                        # Get available subjects, excluding already used ones
+                        used_subject_names = [s['subject'] for s in subjects_used + found_subjects]
+                        available = get_best_subjects_by_group(grades, group_name, 2, used_subject_names)
+                        
+                        if debug:
+                            print(f"Available for 2nd best from {group_name}: {available}")
+                        
+                        if len(available) >= 2:
+                            subject, points, grade = available[1]  # Second best
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"2nd Group {group_num}",
+                                'group': group_name
+                            })
+                            found_points += points
+                            
+                            if debug:
+                                print(f"✓ Added 2nd best: {subject} ({grade}) = {points} points")
+                        elif debug:
+                            print(f"✗ Not enough subjects in {group_name} for 2nd best")
+                
+                elif subject_option.startswith('3rd_group_'):
+                    parts = subject_option.split('_')
+                    if len(parts) >= 3:
+                        group_num = parts[2].upper()
+                        group_name = f'Group {group_num}'
+                        
+                        # Get available subjects, excluding already used ones
+                        used_subject_names = [s['subject'] for s in subjects_used + found_subjects]
+                        available = get_best_subjects_by_group(grades, group_name, 3, used_subject_names)
+                        
+                        if debug:
+                            print(f"Available for 3rd best from {group_name}: {available}")
+                        
+                        if len(available) >= 3:
+                            subject, points, grade = available[2]  # Third best
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"3rd Group {group_num}",
+                                'group': group_name
+                            })
+                            found_points += points
+                            
+                            if debug:
+                                print(f"✓ Added 3rd best: {subject} ({grade}) = {points} points")
+                        elif debug:
+                            print(f"✗ Not enough subjects in {group_name} for 3rd best")
+        
+        # Check if requirement was satisfied
+        if len(found_subjects) >= req_count:
+            subjects_used.extend(found_subjects)
+            cluster_subjects_points += found_points
+            
+            for subj in found_subjects:
+                requirement_details.append(
+                    f"Req {req_index + 1}: {subj['subject']} ({subj['grade']}) = {subj['points']} points"
+                )
+            
+            if debug:
+                print(f"✓ Requirement {req_index + 1} satisfied")
+                for subj in found_subjects:
+                    print(f"  - {subj['subject']}: {subj['grade']} = {subj['points']} points")
+        else:
+            if debug:
+                print(f"✗ Requirement {req_index + 1} FAILED")
+                print(f"  Needed {req_count} subjects, found {len(found_subjects)}")
+                print(f"  Options were: {req_subjects}")
+            
+            requirement_failures.append(
+                f"Requirement {req_index + 1}: Could not satisfy {req_subjects}"
+            )
+            return 0.000, subjects_used, requirement_failures
+    
+    # Ensure we have exactly 4 subjects
+    if len(subjects_used) != 4:
+        if debug:
+            print(f"✗ Wrong number of subjects: {len(subjects_used)} instead of 4")
+            print(f"  Subjects used: {[s['subject'] for s in subjects_used]}")
+        
+        requirement_failures.append(f"Wrong number of subjects: {len(subjects_used)} instead of 4")
+        return 0.000, subjects_used, requirement_failures
+    
+    # Calculate Aggregate Points (AGP) - sum of best 7 subjects
+    # This is INDEPENDENT of cluster subjects - can include them
+    aggregate_points, top_7_subjects = get_aggregate_points(grades)
+    
+    # Apply the formula
+    x = cluster_subjects_points
+    y = aggregate_points
+    
+    if debug:
+        print(f"\n{'='*60}")
+        print(f"CLUSTER {cluster_id} CALCULATION")
+        print(f"{'='*60}")
+        print(f"Subjects used for cluster (x):")
+        total_cluster_points = 0
+        for subj in subjects_used:
+            print(f"  - {subj['subject']}: {subj['grade']} = {subj['points']} points")
+            total_cluster_points += subj['points']
+        print(f"  Total cluster points (x): {total_cluster_points}")
+        print(f"\nAggregate points (y) - Top 7 subjects:")
+        for subject, points in top_7_subjects:
+            print(f"  - {subject}: {points} points")
+        print(f"  Total aggregate points (y): {aggregate_points}")
+    
+    if x <= 0 or y <= 0:
+        if debug:
+            print(f"✗ Invalid points: x={x}, y={y}")
+        requirement_failures.append(f"Invalid points calculation: x={x}, y={y}")
+        return 0.000, subjects_used, requirement_failures
+    
+    try:
+        # Calculate using the formula: sqrt((x/48) * (y/84)) * 48
+        cluster_points = math.sqrt((x / 48.0) * (y / 84.0)) * 48.0
+        
+        # Cap at 48 (maximum possible)
+        cluster_points = min(cluster_points, 48.0)
+        
+        # Apply -3 deviation here
+        cluster_points_with_deviation = max(0.000, cluster_points - 3.0)
+        
+        # Round to 3 decimal places
+        cluster_points = round(cluster_points, 3)
+        cluster_points_with_deviation = round(cluster_points_with_deviation, 3)
+        
+        if debug:
+            print(f"\nFormula: sqrt(({x}/48) × ({y}/84)) × 48")
+            print(f"Calculation: sqrt(({x/48:.4f}) × ({y/84:.4f})) × 48")
+            print(f"Intermediate: sqrt({(x/48)*(y/84):.6f}) × 48")
+            print(f"Result: sqrt({(x/48)*(y/84):.6f}) = {math.sqrt((x/48)*(y/84)):.4f}")
+            print(f"Final cluster points: {math.sqrt((x/48)*(y/84)):.4f} × 48 = {cluster_points}")
+            print(f"After -3 deviation: {cluster_points} - 3 = {cluster_points_with_deviation}")
+            print(f"{'='*60}")
+        
+        return cluster_points_with_deviation, subjects_used, []
+    except Exception as e:
+        if debug:
+            print(f"✗ Error in calculation: {e}")
+        requirement_failures.append(f"Calculation error: {str(e)}")
+        return 0.000, subjects_used, requirement_failures
+
 def validate_kcse_index(kcse_index):
     """Validate KCSE index format: 12345678912/2024"""
     pattern = r'^\d{11}/\d{4}$'
@@ -176,9 +814,83 @@ def initiate_stk_push(phone_number, amount, account_reference, transaction_desc)
         traceback.print_exc()
         raise
 
+# ===== SIMULATED CALLBACK FOR LOCAL TESTING =====
+
+def simulate_mpesa_callback(checkout_request_id, user_id, success=True):
+    """Simulate M-Pesa callback for local testing"""
+    try:
+        print(f"🎭 Simulating callback for {checkout_request_id}...")
+        
+        # Find payment record
+        payment_record = payments_collection.find_one({
+            'mpesa_request_id': checkout_request_id
+        })
+        
+        if not payment_record:
+            print(f"❌ Payment record not found for simulation")
+            return False
+        
+        if success:
+            # Simulate successful payment
+            payment_update = {
+                'status': 'completed',
+                'result_code': 0,
+                'result_desc': 'Success (Simulated for Local Testing)',
+                'mpesa_receipt': f'TEST{random.randint(100000, 999999)}',
+                'transaction_date': datetime.now().strftime('%Y%m%d%H%M%S'),
+                'phone_number': payment_record.get('phone_number', '2547xxxxxxxx'),
+                'amount': PAYMENT_AMOUNT,
+                'updated_at': datetime.now()
+            }
+        else:
+            # Simulate failed payment
+            payment_update = {
+                'status': 'failed',
+                'result_code': 1,
+                'result_desc': 'User cancelled (Simulated)',
+                'updated_at': datetime.now()
+            }
+        
+        # Update payment record
+        payments_collection.update_one(
+            {'mpesa_request_id': checkout_request_id},
+            {'$set': payment_update}
+        )
+        
+        # Update user status
+        if success:
+            users_collection.update_one(
+                {'user_id': user_id},
+                {'$set': {
+                    'payment_status': 'completed',
+                    'payment_date': datetime.now(),
+                    'updated_at': datetime.now()
+                }}
+            )
+        else:
+            users_collection.update_one(
+                {'user_id': user_id},
+                {'$set': {
+                    'payment_status': 'failed',
+                    'updated_at': datetime.now()
+                }}
+            )
+        
+        print(f"✅ Payment simulation complete!")
+        return True
+    except Exception as e:
+        print(f"❌ Payment simulation error: {str(e)}")
+        return False
+
+# ===== ROUTES =====
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -256,7 +968,60 @@ def register():
         users_collection.insert_one(user_data)
         print(f"✅ User created: {user_id}")
         
-        # Initiate payment
+        # Check if we're running locally for testing
+        is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
+        
+        if is_local:
+            print(f"🌐 LOCALHOST DETECTED - Using simulation mode")
+            
+            # Create a simulated checkout request ID
+            checkout_request_id = f'LOCAL_TEST_{user_id}_{int(datetime.now().timestamp())}'
+            
+            # Save simulated payment record
+            transaction_id = str(uuid.uuid4())
+            payment_data = {
+                'transaction_id': transaction_id,
+                'user_id': user_id,
+                'kcse_index': kcse_index,
+                'phone_number': formatted_phone,
+                'amount': PAYMENT_AMOUNT,
+                'mpesa_request_id': checkout_request_id,
+                'merchant_request_id': f'LOCAL_MERCHANT_{user_id}',
+                'status': 'pending',
+                'created_at': datetime.now(),
+                'updated_at': datetime.now()
+            }
+            
+            payments_collection.insert_one(payment_data)
+            
+            # Update user with checkout request ID
+            users_collection.update_one(
+                {'user_id': user_id},
+                {'$set': {
+                    'checkout_request_id': checkout_request_id,
+                    'updated_at': datetime.now()
+                }}
+            )
+            
+            # Store in session
+            session['user_id'] = user_id
+            session['kcse_index'] = kcse_index
+            session['email'] = email
+            session['checkout_request_id'] = checkout_request_id
+            
+            # Automatically simulate successful payment for local testing
+            simulate_mpesa_callback(checkout_request_id, user_id, success=True)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Registration successful (LOCAL TEST MODE - Payment automatically simulated)',
+                'user_id': user_id,
+                'checkout_request_id': checkout_request_id,
+                'local_test_mode': True,
+                'can_calculate': True
+            })
+        
+        # PRODUCTION: Initiate actual M-Pesa payment
         try:
             print(f"💰 Initiating STK Push payment...")
             payment_response = initiate_stk_push(
@@ -543,58 +1308,99 @@ def calculate():
                 'error': 'Payment required. Please complete payment first.'
             }), 402  # Payment Required
         
-        # Process calculation (simplified for testing)
+        # Process calculation
         if request.is_json:
             data = request.json
         else:
             data = request.form.to_dict()
         
-        print(f"🧮 Calculating cluster points for user: {user_id}")
+        print(f"\n{'='*80}")
+        print(f"CALCULATION REQUEST for user: {user_id}")
+        print(f"KCSE Index: {session.get('kcse_index', 'N/A')}")
+        print(f"Email: {session.get('email', 'N/A')}")
+        print(f"{'='*80}")
         
-        # Your cluster calculation logic here
-        # For now, return mock results
-        mock_results = {
-            'success': True,
-            'results': {},
-            'details': {},
-            'aggregate_points': 73,
-            'top_7_subjects': [
-                {'subject': 'mathematics', 'points': 12},
-                {'subject': 'english', 'points': 10},
-                {'subject': 'physics', 'points': 11},
-                {'subject': 'chemistry', 'points': 10},
-                {'subject': 'biology', 'points': 9},
-                {'subject': 'history', 'points': 7},
-                {'subject': 'geography', 'points': 6}
-            ],
-            'formula': 'Cluster Points = √((x/48) × (y/84)) × 48 - 3',
-            'note': 'Payment verified. Results saved to your account.'
-        }
+        grades = {}
         
-        # Generate cluster results
-        for i in range(1, 21):
-            cluster_points = random.uniform(0, 48)
-            mock_results['results'][f'Cluster {i}'] = f"{cluster_points:.3f}"
-            mock_results['details'][f'Cluster {i}'] = {
-                'description': f'Cluster {i} Description',
-                'subjects_used': [
-                    {'subject': 'mathematics', 'grade': 'A', 'points': 12},
-                    {'subject': 'english', 'grade': 'B+', 'points': 10},
-                    {'subject': 'physics', 'grade': 'A-', 'points': 11},
-                    {'subject': 'chemistry', 'grade': 'B+', 'points': 10}
-                ]
+        # All possible subject fields
+        subject_fields = [
+            'mathematics', 'english', 'kiswahili', 'physics', 'chemistry', 'biology',
+            'geography', 'history', 'cre', 'ire', 'hre', 'agriculture', 'computer',
+            'arts', 'woodwork', 'metalwork', 'building', 'electronics', 'homescience',
+            'french', 'german', 'arabic', 'kenya_sign_language', 'music', 'business',
+            'aviation', 'general_science', 'drawing_design', 'power_mechanics'
+        ]
+        
+        # Extract and normalize grades
+        subjects_with_grades = 0
+        for field in subject_fields:
+            if field in data:
+                grade = data[field]
+                if grade and str(grade).strip() and str(grade).strip().upper() != 'SELECT GRADE':
+                    grades[field] = str(grade).strip().upper()
+                    subjects_with_grades += 1
+                else:
+                    grades[field] = None
+        
+        # Log all grades received
+        print(f"Subjects with grades: {subjects_with_grades}")
+        for subject, grade in sorted(grades.items()):
+            if grade:
+                points = GRADE_POINTS.get(grade, 0)
+                print(f"  {subject:25} : {grade:3} -> {points:2} points")
+        
+        # Calculate points for all clusters
+        results = {}
+        cluster_details = {}
+        
+        print(f"\n{'='*80}")
+        print(f"CLUSTER CALCULATIONS")
+        print(f"{'='*80}")
+        
+        for cluster_id in range(1, 21):
+            points, subjects_used, failures = calculate_cluster_points(grades, cluster_id, debug=True)
+            results[f'Cluster {cluster_id}'] = f"{points:.3f}"
+            
+            cluster_details[f'Cluster {cluster_id}'] = {
+                'points': points,
+                'subjects_used': subjects_used,
+                'failures': failures,
+                'description': CLUSTERS[cluster_id]['description']
             }
+            
+            if points > 0:
+                print(f"\n✓ Cluster {cluster_id:2}: {points:7.3f} points - {CLUSTERS[cluster_id]['description']}")
+                for subj in subjects_used:
+                    print(f"    - {subj['subject']:20} : {subj['grade']:3} = {subj['points']:2} points ({subj.get('requirement', 'N/A')})")
+            else:
+                print(f"\n✗ Cluster {cluster_id:2}: 0.000 - {CLUSTERS[cluster_id]['description']}")
+                if failures:
+                    print(f"    Failed: {failures[0]}")
+        
+        # Calculate aggregate points (for display only)
+        aggregate_points, top_7_subjects = get_aggregate_points(grades)
+        
+        print(f"\n{'='*80}")
+        print(f"AGGREGATE POINTS SUMMARY")
+        print(f"{'='*80}")
+        print(f"Total Aggregate Points (y): {aggregate_points}/84")
+        print(f"Top 7 Subjects contributing to aggregate:")
+        rank = 1
+        for subject, points in top_7_subjects:
+            print(f"  {rank:2}. {subject:25} : {points:2} points")
+            rank += 1
         
         # Save results to database
         result_id = str(uuid.uuid4())
         result_data = {
             'result_id': result_id,
             'user_id': user_id,
-            'kcse_index': session['kcse_index'],
-            'email': session['email'],
-            'results': mock_results['results'],
-            'aggregate_points': mock_results['aggregate_points'],
-            'top_7_subjects': mock_results['top_7_subjects'],
+            'kcse_index': session.get('kcse_index', 'N/A'),
+            'email': session.get('email', 'N/A'),
+            'grades': grades,
+            'results': results,
+            'aggregate_points': aggregate_points,
+            'top_7_subjects': [{'subject': s, 'points': p} for s, p in top_7_subjects],
             'calculated_at': datetime.now(),
             'payment_status': 'verified'
         }
@@ -611,20 +1417,206 @@ def calculate():
             }}
         )
         
-        print(f"✅ Calculation completed for user: {user_id}")
+        print(f"\n{'='*80}")
+        print(f"CALCULATION COMPLETE")
+        print(f"Result ID: {result_id}")
+        print(f"User: {user_id}")
+        print(f"{'='*80}")
         
-        return jsonify(mock_results)
+        return jsonify({
+            'success': True,
+            'results': results,
+            'details': cluster_details,
+            'aggregate_points': aggregate_points,
+            'top_7_subjects': [{'subject': s, 'points': p} for s, p in top_7_subjects],
+            'subjects_count': subjects_with_grades,
+            'formula': 'Cluster Points = √((x/48) × (y/84)) × 48 - 3',
+            'note': 'x = sum of 4 unique cluster subjects, y = aggregate points (best 7 subjects)',
+            'deviation_note': 'A -3 deviation has been applied to all cluster points',
+            'warning': 'At least 7 subjects needed for accurate calculation' if subjects_with_grades < 7 else None,
+            'result_id': result_id,
+            'payment_verified': True,
+            'mpesa_receipt': user.get('payment_receipt', 'N/A')
+        })
         
     except Exception as e:
-        print(f"❌ Calculation error: {str(e)}")
+        print(f"\n{'='*80}")
+        print(f"ERROR in calculate: {str(e)}")
+        print(f"{'='*80}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+# ===== TESTING ENDPOINTS =====
+
+@app.route('/test/simulate_payment', methods=['POST'])
+def test_simulate_payment():
+    """Simulate payment for testing (local only)"""
+    try:
+        is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
+        if not is_local:
+            return jsonify({'success': False, 'error': 'This endpoint is for local testing only'}), 403
+        
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        data = request.json
+        checkout_request_id = data.get('checkout_request_id', session.get('checkout_request_id'))
+        success = data.get('success', True)
+        
+        if not checkout_request_id:
+            return jsonify({'success': False, 'error': 'No checkout request ID'}), 400
+        
+        print(f"🧪 Manually simulating payment for testing...")
+        result = simulate_mpesa_callback(checkout_request_id, session['user_id'], success)
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'message': f'Payment simulated {"successfully" if success else "failed"}',
+                'checkout_request_id': checkout_request_id,
+                'can_calculate': success
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to simulate payment'}), 500
+            
+    except Exception as e:
+        print(f"❌ Test payment simulation error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/test/bypass')
+def test_bypass():
+    """Bypass payment for testing (local only)"""
+    try:
+        is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
+        if not is_local:
+            return jsonify({'success': False, 'error': 'This endpoint is for local testing only'}), 403
+        
+        # Create or use existing session
+        if 'user_id' not in session:
+            user_id = 'test_user_' + str(random.randint(1000, 9999))
+            session['user_id'] = user_id
+            session['kcse_index'] = '12345678901/2024'
+            session['email'] = 'test@example.com'
+            session['checkout_request_id'] = 'TEST_' + str(random.randint(10000, 99999))
+        
+        # Mark as paid
+        users_collection.update_one(
+            {'user_id': session['user_id']},
+            {'$set': {
+                'payment_status': 'completed',
+                'payment_date': datetime.now(),
+                'updated_at': datetime.now()
+            }},
+            upsert=True
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Payment bypassed for testing',
+            'user_id': session['user_id'],
+            'kcse_index': session['kcse_index'],
+            'can_calculate': True
+        })
+        
+    except Exception as e:
+        print(f"❌ Test bypass error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/debug')
+def debug():
+    """Debug endpoint to test the system with example data"""
+    # Example from your description:
+    # English B+ (10), Kiswahili B (9), Math A (12), Physics A- (11), 
+    # Chemistry B+ (10), Biology B (9), History C+ (7), Computer A (12)
+    
+    test_grades = {
+        'mathematics': 'A',        # 12
+        'english': 'B+',          # 10
+        'kiswahili': 'B',         # 9
+        'physics': 'A-',          # 11
+        'chemistry': 'B+',        # 10
+        'biology': 'B',           # 9
+        'history': 'C+',          # 7
+        'computer': 'A',          # 12
+        # Total points: 12+10+9+11+10+9+7+12 = 80
+        # Top 7: 12+12+11+10+10+9+9 = 73
+    }
+    
+    # Calculate expected aggregate
+    aggregate_points, top_7 = get_aggregate_points(test_grades)
+    
+    # Test a cluster calculation
+    cluster_points, subjects_used, failures = calculate_cluster_points(test_grades, 1, debug=False)
+    
+    return jsonify({
+        'test_data': test_grades,
+        'expected_aggregate': {
+            'points': aggregate_points,
+            'calculation': '12 (Math) + 12 (Computer) + 11 (Physics) + 10 (English) + 10 (Chemistry) + 9 (Kiswahili) + 9 (Biology) = 73',
+            'top_7_subjects': [{'subject': s, 'points': p} for s, p in top_7]
+        },
+        'cluster_test': {
+            'cluster_1_points': cluster_points,
+            'subjects_used': subjects_used,
+            'failures': failures
+        },
+        'note': 'Test data matches your example: Aggregate should be 73/84',
+        'deviation_note': 'All cluster points will have -3 deviation applied',
+        'endpoints': {
+            'calculate': '/calculate (POST with JSON)',
+            'register': '/register (POST with JSON)',
+            'check_payment': '/check_payment/<checkout_request_id>',
+            'home': '/'
+        }
+    })
+
+@app.route('/test_formula')
+def test_formula():
+    """Test the formula with specific values and deviation"""
+    # Example: x = 40, y = 70
+    x = 40
+    y = 70
+    
+    # Calculate using formula
+    result = math.sqrt((x / 48.0) * (y / 84.0)) * 48.0
+    result_with_deviation = max(0.000, result - 3.0)
+    result = round(result, 3)
+    result_with_deviation = round(result_with_deviation, 3)
+    
+    return jsonify({
+        'formula': '√((x/48) × (y/84)) × 48 - 3',
+        'x': x,
+        'y': y,
+        'calculation': f'√(({x}/48) × ({y}/84)) × 48',
+        'step1': f'x/48 = {x}/48 = {x/48:.4f}',
+        'step2': f'y/84 = {y}/84 = {y/84:.4f}',
+        'step3': f'(x/48) × (y/84) = {(x/48)*(y/84):.6f}',
+        'step4': f'√((x/48) × (y/84)) = {math.sqrt((x/48)*(y/84)):.4f}',
+        'step5': f'√((x/48) × (y/84)) × 48 = {result}',
+        'step6': f'After -3 deviation: {result} - 3 = {result_with_deviation}',
+        'original_result': result,
+        'result_with_deviation': result_with_deviation,
+        'deviation_applied': -3
+    })
 
 @app.route('/health')
 def health():
+    is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
+    
     return jsonify({
         'status': 'healthy', 
         'timestamp': datetime.now().isoformat(),
-        'mongo_connected': db is not None
+        'mongo_connected': db is not None,
+        'mpesa_environment': MPESA_CONFIG['environment'],
+        'is_local': is_local,
+        'callback_url': MPESA_CONFIG['callback_url'],
+        'payment_amount': PAYMENT_AMOUNT
     })
 
 if __name__ == '__main__':
@@ -654,6 +1646,15 @@ if __name__ == '__main__':
         print("   3. Invalid business shortcode")
         print("   4. Account not active")
     
+    print("\n📍 LOCAL TESTING INSTRUCTIONS:")
+    print("   1. Register normally")
+    print("   2. Payment will be automatically simulated")
+    print("   3. Then use the calculator")
+    print("\n📍 PRODUCTION INSTRUCTIONS:")
+    print("   1. Register normally")
+    print("   2. Complete M-Pesa payment on your phone")
+    print("   3. Payment will be verified automatically")
+    print("   4. Then use the calculator")
     print("=" * 60)
     print("Starting server on http://0.0.0.0:5000")
     print("Press CTRL+C to quit")
