@@ -1797,13 +1797,21 @@
         }, 300000); // 5 minutes
     }
 
-    // Calculate points after payment
+    // Calculate points after payment - FIXED VERSION
     async function calculatePointsAfterPayment() {
         showLoading(true, 'Calculating your cluster points...');
         
         try {
             // Get grades from sessionStorage
             const grades = JSON.parse(sessionStorage.getItem('grades'));
+            
+            console.log('📊 Sending grades for calculation:', grades);
+            
+            if (!grades) {
+                alert('No grades found. Please enter your grades first.');
+                showLoading(false);
+                return;
+            }
             
             // Send grades for calculation
             const response = await fetch('/calculate', {
@@ -1816,6 +1824,7 @@
             });
             
             const data = await response.json();
+            console.log('📈 Calculation response:', data);
             
             if (data.success) {
                 // Display results
@@ -1841,14 +1850,22 @@
 
     // Format cluster points with color coding
     function formatClusterPoints(points) {
+        if (points === undefined || points === null) {
+            return '<span class="points-zero">0.000</span>';
+        }
+        
         const num = parseFloat(points);
-        if (num >= 30) return '<span class="points-high">' + points + '</span>';
-        if (num >= 15) return '<span class="points-medium">' + points + '</span>';
-        if (num > 0) return points;
+        if (isNaN(num)) {
+            return '<span class="points-zero">0.000</span>';
+        }
+        
+        if (num >= 30) return '<span class="points-high">' + num.toFixed(3) + '</span>';
+        if (num >= 15) return '<span class="points-medium">' + num.toFixed(3) + '</span>';
+        if (num > 0) return num.toFixed(3);
         return '<span class="points-zero">0.000</span>';
     }
 
-    // Show cluster details modal
+    // Show cluster details modal - FIXED VERSION
     function showClusterDetails(clusterId, clusterName, points, subjectsUsed) {
         const modalTitle = document.getElementById('modalTitle');
         const modalContent = document.getElementById('modalContent');
@@ -1859,6 +1876,7 @@
             <div class="mb-3">
                 <h5>${clusterName}</h5>
                 <p>Cluster Points: <strong>${points}</strong></p>
+                <p class="text-muted">Formula: √((x/48) × (y/84)) × 48 - 3</p>
             </div>
         `;
         
@@ -1868,23 +1886,41 @@
             
             let totalPoints = 0;
             subjectsUsed.forEach((subject, index) => {
-                const gradeClass = `grade-${subject.grade ? subject.grade.charAt(0) : 'E'}`;
+                // Handle both old and new data structures
+                const subjectName = subject.subject || subject.name || 'Unknown';
+                const grade = subject.grade || 'E';
+                const points = subject.points || 0;
+                const requirement = subject.requirement || '';
+                
+                const gradeClass = `grade-${grade ? grade.charAt(0) : 'E'}`;
                 html += `<div class="subject-detail-item">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="subject-grade">${subject.subject ? subject.subject.replace('_', ' ').toUpperCase() : 'Unknown'}</span>
-                            <span class="badge ${gradeClass} subject-badge">${subject.grade || 'E'}</span>
-                            ${subject.requirement ? `<span class="requirement-badge">${subject.requirement}</span>` : ''}
+                            <span class="subject-grade">${subjectName.replace('_', ' ').toUpperCase()}</span>
+                            <span class="badge ${gradeClass} subject-badge">${grade}</span>
+                            ${requirement ? `<span class="requirement-badge">${requirement}</span>` : ''}
                         </div>
-                        <div class="subject-points">${subject.points || 0} points</div>
+                        <div class="subject-points">${points} points</div>
                     </div>
                 </div>`;
-                totalPoints += subject.points || 0;
+                totalPoints += points;
             });
             
             html += `</div>
             <div class="mt-3 p-3 bg-light rounded">
-                <strong>Total Cluster Points (x):</strong> ${totalPoints} / 48
+                <strong>Total Cluster Subjects Points (x):</strong> ${totalPoints} / 48
+                <br>
+                <small class="text-muted">x = sum of 4 unique cluster subjects used</small>
+            </div>`;
+        } else {
+            html += `<div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No subjects used for this cluster. This could be because:
+                <ul class="mb-0 mt-2">
+                    <li>Required subjects not available in your grades</li>
+                    <li>Subjects don't meet minimum requirements</li>
+                    <li>Cluster requirements not satisfied</li>
+                </ul>
             </div>`;
         }
         
@@ -1895,8 +1931,11 @@
         modal.show();
     }
 
-    // Display results
+    // Display results - COMPLETELY REWRITTEN VERSION
     function displayResults(data, userInfo) {
+        console.log('🎯 Displaying results with data:', data);
+        console.log('👤 User info:', userInfo);
+        
         const resultsSection = document.getElementById('resultsSection');
         const clusterGrid = document.getElementById('clusterGrid');
         const aggregateDisplay = document.getElementById('aggregateDisplay');
@@ -1910,36 +1949,69 @@
         // Display user info
         if (userInfo) {
             userInfoDisplay.innerHTML = `
-                <div>KCSE Index: <strong>${userInfo.kcse_index}</strong></div>
-                <div>Email: <strong>${userInfo.email}</strong></div>
+                <div>KCSE Index: <strong>${userInfo.kcse_index || 'N/A'}</strong></div>
+                <div>Email: <strong>${userInfo.email || 'N/A'}</strong></div>
                 <div>Payment: <span class="badge bg-success">Verified ✓</span></div>
             `;
         }
         
         // Display aggregate points
-        if (data.aggregate_points) {
+        if (data.aggregate_points !== undefined) {
             aggregateDisplay.innerHTML = `
                 <div>Aggregate Points (y): <strong>${data.aggregate_points} / 84</strong></div>
-                <div>Top 7 Subjects: ${data.top_7_subjects ? data.top_7_subjects.map(s => `${s.subject ? s.subject.replace('_', ' ') : ''} (${s.points})`).join(', ') : 'None'}</div>
+                <div>Top 7 Subjects: ${data.top_7_subjects ? data.top_7_subjects.map(s => {
+                    const subjectName = s.subject ? s.subject.replace('_', ' ') : '';
+                    return `${subjectName} (${s.points})`;
+                }).join(', ') : 'None'}</div>
             `;
+        } else {
+            aggregateDisplay.innerHTML = '<div>Aggregate points not available</div>';
         }
         
         // Clear previous results
         clusterGrid.innerHTML = '';
         topClustersGrid.innerHTML = '';
         
-        // Sort clusters by points (descending) for display
+        // Prepare clusters data - FIXED LOGIC
         const clusters = [];
-        for (let i = 1; i <= 20; i++) {
-            const clusterKey = `Cluster ${i}`;
-            if (data.results && data.results[clusterKey]) {
-                const points = parseFloat(data.results[clusterKey]);
+        
+        // Check if we have results in the expected format
+        if (data.results && typeof data.results === 'object') {
+            // Format 1: results is an object with Cluster 1, Cluster 2, etc.
+            for (let i = 1; i <= 20; i++) {
+                const clusterKey = `Cluster ${i}`;
+                const pointsValue = data.results[clusterKey];
+                
+                if (pointsValue !== undefined) {
+                    const points = parseFloat(pointsValue);
+                    clusters.push({
+                        id: i,
+                        name: clusterKey,
+                        points: isNaN(points) ? 0 : points,
+                        pointsFormatted: isNaN(points) ? '0.000' : points.toFixed(3),
+                        description: data.details && data.details[clusterKey] ? 
+                            data.details[clusterKey].description : `Cluster ${i}`
+                    });
+                } else {
+                    // If no result for this cluster, add with 0 points
+                    clusters.push({
+                        id: i,
+                        name: clusterKey,
+                        points: 0,
+                        pointsFormatted: '0.000',
+                        description: `Cluster ${i}`
+                    });
+                }
+            }
+        } else {
+            // If no results object, create empty clusters
+            for (let i = 1; i <= 20; i++) {
                 clusters.push({
                     id: i,
-                    name: clusterKey,
-                    points: points,
-                    pointsFormatted: data.results[clusterKey],
-                    description: data.details && data.details[clusterKey] ? data.details[clusterKey].description : ''
+                    name: `Cluster ${i}`,
+                    points: 0,
+                    pointsFormatted: '0.000',
+                    description: `Cluster ${i}`
                 });
             }
         }
@@ -1947,26 +2019,27 @@
         // Sort by points descending
         clusters.sort((a, b) => b.points - a.points);
         
-        // Get top 3 clusters
-        const topClusters = clusters.slice(0, 3);
+        // Get top 3 clusters (non-zero)
+        const topClusters = clusters.filter(c => c.points > 0).slice(0, 3);
         
         // Display all clusters
-        clusters.forEach((cluster, index) => {
+        clusters.forEach((cluster) => {
             const cardClass = cluster.points === 0 ? 'zero' : (cluster.points >= 30 ? 'highlight' : '');
             const pointsDisplay = formatClusterPoints(cluster.pointsFormatted);
             
             const clusterCard = document.createElement('div');
             clusterCard.className = `cluster-card ${cardClass}`;
             clusterCard.onclick = () => {
-                const details = data.details && data.details[`Cluster ${cluster.id}`];
-                if (details) {
-                    showClusterDetails(
-                        cluster.id,
-                        cluster.name,
-                        cluster.pointsFormatted,
-                        details.subjects_used
-                    );
-                }
+                // Get details for this cluster
+                const clusterKey = `Cluster ${cluster.id}`;
+                const details = data.details && data.details[clusterKey];
+                
+                showClusterDetails(
+                    cluster.id,
+                    cluster.name,
+                    cluster.pointsFormatted,
+                    details ? details.subjects_used : []
+                );
             };
             
             clusterCard.innerHTML = `
@@ -1975,8 +2048,8 @@
                     <div class="cluster-points">${pointsDisplay}</div>
                 </div>
                 <div class="cluster-name">${cluster.name}</div>
-                <div class="cluster-description">${cluster.description}</div>
-                <div class="cluster-subjects" id="subjects-${cluster.id}"></div>
+                <div class="cluster-description">${getClusterDescription(cluster.id)}</div>
+                ${cluster.points > 0 ? '<small class="text-muted">Click for details</small>' : '<small class="text-danger">No points - requirements not met</small>'}
             `;
             
             clusterGrid.appendChild(clusterCard);
@@ -1991,16 +2064,18 @@
                 const clusterCard = document.createElement('div');
                 clusterCard.className = 'cluster-card highlight';
                 clusterCard.onclick = () => {
-                    const details = data.details && data.details[`Cluster ${cluster.id}`];
-                    if (details) {
-                        showClusterDetails(
-                            cluster.id,
-                            cluster.name,
-                            cluster.pointsFormatted,
-                            details.subjects_used
-                        );
-                    }
+                    const clusterKey = `Cluster ${cluster.id}`;
+                    const details = data.details && data.details[clusterKey];
+                    
+                    showClusterDetails(
+                        cluster.id,
+                        cluster.name,
+                        cluster.pointsFormatted,
+                        details ? details.subjects_used : []
+                    );
                 };
+                
+                const rank = clusters.findIndex(c => c.id === cluster.id) + 1;
                 
                 clusterCard.innerHTML = `
                     <div class="cluster-header">
@@ -2008,9 +2083,9 @@
                         <div class="cluster-points">${pointsDisplay}</div>
                     </div>
                     <div class="cluster-name">${cluster.name}</div>
-                    <div class="cluster-description">${cluster.description}</div>
+                    <div class="cluster-description">${getClusterDescription(cluster.id)}</div>
                     <div class="text-center mt-2">
-                        <span class="badge bg-success"><i class="fas fa-trophy me-1"></i> Top ${clusters.indexOf(cluster) + 1}</span>
+                        <span class="badge bg-success"><i class="fas fa-trophy me-1"></i> Top ${rank}</span>
                     </div>
                 `;
                 
@@ -2022,6 +2097,33 @@
         
         // Scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Helper function to get cluster description
+    function getClusterDescription(clusterId) {
+        const descriptions = {
+            1: 'Law',
+            2: 'Business and Hospitality',
+            3: 'Social Sciences & Arts',
+            4: 'Geosciences',
+            5: 'Engineering, Technology',
+            6: 'Architecture, Building',
+            7: 'Computing, IT',
+            8: 'Agribusiness',
+            9: 'General Sciences',
+            10: 'Actuarial Science',
+            11: 'Interior Design',
+            12: 'Sport Science',
+            13: 'Medicine',
+            14: 'History',
+            15: 'Agriculture',
+            16: 'Geography Focus',
+            17: 'French & German',
+            18: 'Music & Arts',
+            19: 'Education Related',
+            20: 'Religious Studies'
+        };
+        return descriptions[clusterId] || `Cluster ${clusterId}`;
     }
 
     // Sort clusters
@@ -2037,8 +2139,13 @@
         clusters.sort((a, b) => {
             const aId = parseInt(a.querySelector('.cluster-number').textContent);
             const bId = parseInt(b.querySelector('.cluster-number').textContent);
-            const aPoints = parseFloat(a.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
-            const bPoints = parseFloat(b.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
+            
+            // Extract points from HTML (handles span tags)
+            const aPointsText = a.querySelector('.cluster-points').textContent;
+            const bPointsText = b.querySelector('.cluster-points').textContent;
+            
+            const aPoints = parseFloat(aPointsText.replace(/[^\d.]/g, '') || 0);
+            const bPoints = parseFloat(bPointsText.replace(/[^\d.]/g, '') || 0);
             
             switch (sortType) {
                 case 'number':
@@ -2060,7 +2167,8 @@
         // For non-zero filter, hide/show
         if (sortType === 'non-zero') {
             clusters.forEach(cluster => {
-                const points = parseFloat(cluster.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
+                const pointsText = cluster.querySelector('.cluster-points').textContent;
+                const points = parseFloat(pointsText.replace(/[^\d.]/g, '') || 0);
                 cluster.style.display = points === 0 ? 'none' : 'block';
             });
         } else {
@@ -2195,7 +2303,7 @@
         showUserDetailsModal();
     });
 
-    // Handle retrieve form submission
+    // Handle retrieve form submission - FIXED VERSION
     document.getElementById('retrieveForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -2217,6 +2325,7 @@
             });
             
             const data = await response.json();
+            console.log('🔍 Retrieve response:', data);
             
             if (data.success) {
                 // Close retrieve modal
@@ -2233,11 +2342,15 @@
                 
                 // Show success message
                 showSuccessMessage(`Results retrieved for ${data.kcse_index}`);
+                
+                // Show results section
+                document.getElementById('resultsSection').style.display = 'block';
             } else {
-                alert('Error: ' + data.error);
+                alert('Error: ' + (data.error || 'Failed to retrieve results'));
             }
         } catch (error) {
             alert('Network error: ' + error.message);
+            console.error('Retrieve error:', error);
         } finally {
             retrieveBtn.innerHTML = originalText;
             retrieveBtn.disabled = false;
@@ -2302,8 +2415,8 @@
         const statusText = document.getElementById('userStatusText');
         
         statusText.innerHTML = `
-            Logged in as: <strong>${data.kcse_index}</strong> | 
-            Email: <strong>${data.email}</strong> | 
+            Logged in as: <strong>${data.kcse_index || 'N/A'}</strong> | 
+            Email: <strong>${data.email || 'N/A'}</strong> | 
             Payment: <span class="badge bg-success">Completed ✓</span> |
             Calculations: <strong>${data.calculation_count || 0}</strong>
         `;
@@ -2327,6 +2440,11 @@
             });
         });
     });
+    
+    // Debug helper
+    function debugLog(message, data) {
+        console.log(`🔍 ${message}:`, data);
+    }
     </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, session, send_file
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, send_file, redirect, Response
 from datetime import datetime, timedelta
 import math
 import json
@@ -9,6 +9,7 @@ import requests
 import base64
 import random
 import io
+from functools import wraps 
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from reportlab.lib.pagesizes import letter, A4
@@ -813,34 +814,32 @@ def register():
             ]
         })
         
+        user_id = None
+        
         if existing_user:
             print(f"⚠️  User already exists: {existing_user.get('user_id')}")
+            user_id = existing_user['user_id']
+            
             # Check if already paid
             if existing_user.get('payment_status') == 'completed':
-                session['user_id'] = existing_user['user_id']
+                session['user_id'] = user_id
                 session['kcse_index'] = kcse_index
                 session['email'] = email
                 return jsonify({
                     'success': True,
                     'message': 'User already registered and paid',
-                    'user_id': existing_user['user_id'],
+                    'user_id': user_id,
                     'already_paid': True
                 })
             else:
                 # Update user with new phone number if changed
                 users_collection.update_one(
-                    {'user_id': existing_user['user_id']},
+                    {'user_id': user_id},
                     {'$set': {
                         'phone_number': formatted_phone,
                         'updated_at': datetime.now()
                     }}
                 )
-                
-                # Store in session
-                session['user_id'] = existing_user['user_id']
-                session['kcse_index'] = kcse_index
-                session['email'] = email
-        
         else:
             # Create new user record
             user_id = str(uuid.uuid4())
@@ -856,11 +855,11 @@ def register():
             
             users_collection.insert_one(user_data)
             print(f"✅ User created: {user_id}")
-            
-            # Store in session
-            session['user_id'] = user_id
-            session['kcse_index'] = kcse_index
-            session['email'] = email
+        
+        # Store in session
+        session['user_id'] = user_id
+        session['kcse_index'] = kcse_index
+        session['email'] = email
         
         # Check if we're running locally for testing
         is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
@@ -869,80 +868,55 @@ def register():
             print(f"🌐 LOCALHOST DETECTED - Using simulation mode")
             
             # Create a simulated checkout request ID
-            checkout_request_id = f'LOCAL_TEST_{session["user_id"]}_{int(datetime.now().timestamp())}'
+            checkout_request_id = f'LOCAL_TEST_{user_id}_{int(datetime.now().timestamp())}'
             
-            # Save simulated payment record
+            # Save simulated payment record with immediate completion
             transaction_id = str(uuid.uuid4())
+            mpesa_receipt = f'TEST{random.randint(100000, 999999)}'
+            
             payment_data = {
                 'transaction_id': transaction_id,
-                'user_id': session['user_id'],
+                'user_id': user_id,
                 'kcse_index': kcse_index,
                 'phone_number': formatted_phone,
                 'amount': PAYMENT_AMOUNT,
                 'mpesa_request_id': checkout_request_id,
-                'merchant_request_id': f'LOCAL_MERCHANT_{session["user_id"]}',
-                'status': 'pending',
+                'merchant_request_id': f'LOCAL_MERCHANT_{user_id}',
+                'status': 'completed',
+                'result_code': 0,
+                'result_desc': 'Success (Simulated for Local Testing)',
+                'mpesa_receipt': mpesa_receipt,
+                'transaction_date': datetime.now().strftime('%Y%m%d%H%M%S'),
                 'created_at': datetime.now(),
                 'updated_at': datetime.now()
             }
             
             payments_collection.insert_one(payment_data)
             
-            # Update user with checkout request ID
+            # Update user with checkout request ID and payment status
             users_collection.update_one(
-                {'user_id': session['user_id']},
+                {'user_id': user_id},
                 {'$set': {
                     'checkout_request_id': checkout_request_id,
+                    'payment_status': 'completed',
+                    'payment_date': datetime.now(),
+                    'payment_receipt': mpesa_receipt,
                     'updated_at': datetime.now()
                 }}
             )
             
             session['checkout_request_id'] = checkout_request_id
             
-            # Automatically simulate successful payment for local testing
-            # Simulate payment callback after 1 second
-            def simulate_callback():
-                payment_update = {
-                    'status': 'completed',
-                    'result_code': 0,
-                    'result_desc': 'Success (Simulated for Local Testing)',
-                    'mpesa_receipt': f'TEST{random.randint(100000, 999999)}',
-                    'transaction_date': datetime.now().strftime('%Y%m%d%H%M%S'),
-                    'phone_number': formatted_phone,
-                    'amount': PAYMENT_AMOUNT,
-                    'updated_at': datetime.now()
-                }
-                
-                # Update payment record
-                payments_collection.update_one(
-                    {'mpesa_request_id': checkout_request_id},
-                    {'$set': payment_update}
-                )
-                
-                # Update user status
-                users_collection.update_one(
-                    {'user_id': session['user_id']},
-                    {'$set': {
-                        'payment_status': 'completed',
-                        'payment_date': datetime.now(),
-                        'payment_receipt': payment_update['mpesa_receipt'],
-                        'updated_at': datetime.now()
-                    }}
-                )
-                
-                print(f"✅ Payment simulated successfully!")
-            
-            # Run simulation in background
-            import threading
-            timer = threading.Timer(1.0, simulate_callback)
-            timer.start()
+            print(f"✅ Local payment simulation complete for user: {user_id}")
             
             return jsonify({
                 'success': True,
-                'message': 'Registration successful (LOCAL TEST MODE - Payment will be simulated)',
-                'user_id': session['user_id'],
+                'message': 'Registration and payment simulation successful',
+                'user_id': user_id,
                 'checkout_request_id': checkout_request_id,
-                'local_test_mode': True
+                'local_test_mode': True,
+                'payment_simulated': True,
+                'can_calculate': True
             })
         
         # PRODUCTION: Initiate actual M-Pesa payment
@@ -960,7 +934,7 @@ def register():
                 transaction_id = str(uuid.uuid4())
                 payment_data = {
                     'transaction_id': transaction_id,
-                    'user_id': session['user_id'],
+                    'user_id': user_id,
                     'kcse_index': kcse_index,
                     'phone_number': formatted_phone,
                     'amount': PAYMENT_AMOUNT,
@@ -976,7 +950,7 @@ def register():
                 
                 # Update user with checkout request ID
                 users_collection.update_one(
-                    {'user_id': session['user_id']},
+                    {'user_id': user_id},
                     {'$set': {
                         'checkout_request_id': payment_response.get('CheckoutRequestID'),
                         'updated_at': datetime.now()
@@ -988,7 +962,7 @@ def register():
                 return jsonify({
                     'success': True,
                     'message': 'Payment initiated successfully',
-                    'user_id': session['user_id'],
+                    'user_id': user_id,
                     'checkout_request_id': payment_response.get('CheckoutRequestID'),
                     'merchant_request_id': payment_response.get('MerchantRequestID'),
                     'response_description': payment_response.get('ResponseDescription')
@@ -1458,6 +1432,23 @@ def health():
             'fixed_group_logic': True
         }
     })
+# ===== ADMIN SETUP =====
+
+# Admin credentials
+ADMIN_CREDENTIALS = {
+    'username': os.getenv('ADMIN_USERNAME', 'admin'),
+    'password': os.getenv('ADMIN_PASSWORD', 'admin123')
+}
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_logged_in' not in session:
+            return redirect('/admin/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 
 if __name__ == '__main__':
     print("=" * 60)
