@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - KCSE Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --kuccps-red: #C62828;
+            --kuccps-yellow: #FBC02D;
+            --kuccps-light-grey: #F5F5F5;
+            --kuccps-medium-grey: #9E9E9E;
+            --kuccps-black: #000000;
+            --kuccps-white: #FFFFFF;
+            --kuccps-blue: #1565C0;
+            --kuccps-green: #2E7D32;
+            --kuccps-purple: #7B1FA2;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--kuccps-light-grey) 0%, #e0e0e0 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--kuccps-red) 0%, #B71C1C 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: white;
+        }
+        
+        .navbar h1 i {
+            color: var(--kuccps-yellow);
+            margin-right: 10px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .logout {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--kuccps-red);
+        }
+        
+        .stat-card h3 {
+            color: var(--kuccps-medium-grey);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--kuccps-black);
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: var(--kuccps-medium-grey);
+            font-size: 14px;
+        }
+        
+        .tab-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #f0f0f0;
+            background: #fafafa;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--kuccps-medium-grey);
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            color: var(--kuccps-red);
+        }
+        
+        .tab.active {
+            color: var(--kuccps-red);
+            border-bottom: 2px solid var(--kuccps-red);
+            margin-bottom: -2px;
+        }
+        
+        .tab-content {
+            padding: 25px;
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: var(--kuccps-red);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #B71C1C;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(198, 40, 40, 0.3);
+        }
+        
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: var(--kuccps-green);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1B5E20;
+            transform: translateY(-2px);
+        }
+        
+        .btn-warning {
+            background: var(--kuccps-yellow);
+            color: var(--kuccps-black);
+        }
+        
+        .btn-warning:hover {
+            background: #F9A825;
+            transform: translateY(-2px);
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #f7f7f7;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--kuccps-black);
+            font-size: 14px;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            color: var(--kuccps-black);
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .badge-danger {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .badge-warning {
+            background: #feebc8;
+            color: #744210;
+        }
+        
+        .badge-purple {
+            background: #e9d8fd;
+            color: #553c9a;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            background: var(--kuccps-red);
+            color: white;
+            padding: 15px 20px;
+            margin: -30px -30px 20px -30px;
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .modal-header .close {
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            float: right;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--kuccps-black);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--kuccps-red);
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--kuccps-medium-grey);
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--kuccps-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+        
+        .alert-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+        
+        .filter-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .pagination button.active {
+            background: var(--kuccps-red);
+            color: white;
+            border-color: var(--kuccps-red);
+        }
+        
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                text-align: left;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            
+            .tab.active {
+                border-bottom: 1px solid var(--kuccps-red);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1><i class="fas fa-calculator"></i> KCSE Calculator Admin</h1>
+        <div class="nav-links">
+            <a href="/" target="_blank"><i class="fas fa-external-link-alt me-1"></i> View Site</a>
+            <a href="/admin/logout" class="logout"><i class="fas fa-sign-out-alt me-1"></i> Logout</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3><i class="fas fa-money-bill-wave me-2" style="color: var(--kuccps-green);"></i> Total Revenue</h3>
+                <div class="stat-number" id="totalAmount">Ksh 0</div>
+                <div class="stat-label" id="successfulCount">0 successful payments</div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-times-circle me-2" style="color: var(--kuccps-red);"></i> Failed Payments</h3>
+                <div class="stat-number" id="failedCount">0</div>
+                <div class="stat-label">awaiting cleanup</div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-users me-2" style="color: var(--kuccps-blue);"></i> Total Users</h3>
+                <div class="stat-number" id="totalUsers">0</div>
+                <div class="stat-label" id="paidUsers">0 paid</div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-chart-line me-2" style="color: var(--kuccps-yellow);"></i> Conversion Rate</h3>
+                <div class="stat-number" id="conversionRate">0%</div>
+                <div class="stat-label">users who paid</div>
+            </div>
+        </div>
+        
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
+        
+        <!-- Tab Container -->
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('overview')">
+                    <i class="fas fa-chart-pie me-2"></i>Overview
+                </button>
+                <button class="tab" onclick="switchTab('manual')">
+                    <i class="fas fa-hand-holding-heart me-2"></i>Manual Activation
+                </button>
+                <button class="tab" onclick="switchTab('failed')">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Failed Payments
+                </button>
+                <button class="tab" onclick="switchTab('users')">
+                    <i class="fas fa-users me-2"></i>Users
+                </button>
+            </div>
+            
+            <!-- Overview Tab -->
+            <div id="overviewTab" class="tab-content active">
+                <div class="action-bar">
+                    <h3><i class="fas fa-history me-2" style="color: var(--kuccps-red);"></i> Recent Payments</h3>
+                    <button class="btn btn-primary" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-2"></i> Refresh
+                    </button>
+                </div>
+                
+                <div class="filter-section">
+                    <i class="fas fa-search me-2" style="color: var(--kuccps-medium-grey);"></i>
+                    <input type="text" class="filter-input" id="paymentFilter" placeholder="Search by KCSE Index or Receipt..." onkeyup="filterPayments()">
+                </div>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Receipt</th>
+                                <th>KCSE Index</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Manual</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentPaymentsTable">
+                            <tr><td colspan="6" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Manual Activation Tab -->
+            <div id="manualTab" class="tab-content">
+                <div class="action-bar">
+                    <h3><i class="fas fa-hand-holding-heart me-2" style="color: var(--kuccps-purple);"></i> Manual Payment Activation</h3>
+                    <button class="btn btn-success" onclick="showManualPaymentModal()">
+                        <i class="fas fa-plus-circle me-2"></i> Add Manual Payment
+                    </button>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Use this for users who paid via other means (bank, cash, etc.). 
+                    They can then enter their email or KCSE index and the system will recognize the manual payment.
+                    Manual payments are valid for 30 days.
+                </div>
+                
+                <div class="filter-section">
+                    <i class="fas fa-search me-2" style="color: var(--kuccps-medium-grey);"></i>
+                    <input type="text" class="filter-input" id="manualFilter" placeholder="Search by KCSE Index or Email..." onkeyup="filterManualPayments()">
+                </div>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>KCSE Index</th>
+                                <th>Email</th>
+                                <th>Receipt</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Days Left</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manualPaymentsTable">
+                            <tr><td colspan="7" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Failed Payments Tab -->
+            <div id="failedTab" class="tab-content">
+                <div class="action-bar">
+                    <h3><i class="fas fa-exclamation-triangle me-2" style="color: var(--kuccps-red);"></i> Failed Payments</h3>
+                    <button class="btn btn-danger" onclick="deleteFailedPayments()">
+                        <i class="fas fa-trash-alt me-2"></i> Delete All Failed
+                    </button>
+                </div>
+                
+                <div class="filter-section">
+                    <i class="fas fa-search me-2" style="color: var(--kuccps-medium-grey);"></i>
+                    <input type="text" class="filter-input" id="failedFilter" placeholder="Search by KCSE Index or Phone..." onkeyup="filterFailedPayments()">
+                </div>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>KCSE Index</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Amount</th>
+                                <th>Error</th>
+                            </tr>
+                        </thead>
+                        <tbody id="failedPaymentsTable">
+                            <tr><td colspan="6" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Users Tab -->
+            <div id="usersTab" class="tab-content">
+                <div class="action-bar">
+                    <h3><i class="fas fa-users me-2" style="color: var(--kuccps-blue);"></i> All Users</h3>
+                </div>
+                
+                <div class="filter-section">
+                    <i class="fas fa-search me-2" style="color: var(--kuccps-medium-grey);"></i>
+                    <input type="text" class="filter-input" id="userFilter" placeholder="Search by KCSE Index, Email or Phone..." onkeyup="filterUsers()">
+                </div>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Registered</th>
+                                <th>KCSE Index</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Payment Status</th>
+                                <th>Receipt</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr><td colspan="8" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination" id="userPagination">
+                    <!-- Pagination will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Manual Payment Modal -->
+    <div id="manualPaymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-hand-holding-heart me-2"></i> Add Manual Payment</h2>
+                <span class="close" onclick="hideManualPaymentModal()">&times;</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="manualKcseIndex">KCSE Index *</label>
+                <input type="text" id="manualKcseIndex" placeholder="12345678912/2024">
+                <small class="text-muted">Format: 11 digits/year</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="manualEmail">Email *</label>
+                <input type="email" id="manualEmail" placeholder="user@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="manualReceipt">M-Pesa Receipt *</label>
+                <input type="text" id="manualReceipt" placeholder="RKT6QX8P9V">
+                <small class="text-muted">Enter a unique receipt number</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="manualPhone">Phone Number (Optional)</label>
+                <input type="text" id="manualPhone" placeholder="0712345678">
+            </div>
+            
+            <div class="form-group">
+                <label for="manualAmount">Amount (Ksh)</label>
+                <input type="number" id="manualAmount" value="100" min="1">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideManualPaymentModal()">Cancel</button>
+                <button class="btn btn-success" onclick="addManualPayment()">
+                    <i class="fas fa-check-circle me-2"></i> Activate Payment
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--kuccps-red);">
+                <h2><i class="fas fa-exclamation-triangle me-2"></i> Confirm Delete</h2>
+                <span class="close" onclick="hideDeleteModal()">&times;</span>
+            </div>
+            
+            <div class="p-4 text-center">
+                <i class="fas fa-trash-alt fa-4x mb-3" style="color: var(--kuccps-red);"></i>
+                <h4 id="deleteMessage">Are you sure you want to delete this item?</h4>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'overview';
+        let deleteCallback = null;
+        let allData = {
+            payments: [],
+            failed: [],
+            users: [],
+            manual: []
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadOverview();
+        });
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close float-end" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = '';
+            container.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(tab + 'Tab').classList.add('active');
+            
+            loadTabData(tab);
+        }
+
+        // Load tab data
+        function loadTabData(tab) {
+            if (tab === 'overview') {
+                loadOverview();
+            } else if (tab === 'failed') {
+                loadFailedPayments();
+            } else if (tab === 'users') {
+                loadUsers();
+            } else if (tab === 'manual') {
+                loadManualPayments();
+            }
+        }
+
+        // Refresh all data
+        function refreshData() {
+            loadStats();
+            loadTabData(currentTab);
+            showAlert('Data refreshed successfully', 'success');
+        }
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/admin/api/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalAmount').textContent = `Ksh ${data.stats.total_amount.toLocaleString()}`;
+                    document.getElementById('successfulCount').textContent = `${data.stats.total_successful} successful payments`;
+                    document.getElementById('failedCount').textContent = data.stats.failed_payments;
+                    document.getElementById('totalUsers').textContent = data.stats.total_users;
+                    document.getElementById('paidUsers').textContent = `${data.stats.paid_users} paid`;
+                    
+                    const conversionRate = data.stats.total_users > 0 
+                        ? Math.round((data.stats.paid_users / data.stats.total_users) * 100) 
+                        : 0;
+                    document.getElementById('conversionRate').textContent = `${conversionRate}%`;
+                    
+                    allData.payments = data.recent_payments || [];
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                showAlert('Failed to load statistics', 'error');
+            }
+        }
+
+        // Load overview
+        async function loadOverview() {
+            try {
+                const response = await fetch('/admin/api/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('recentPaymentsTable');
+                    
+                    if (data.recent_payments.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No payments found</td></tr>';
+                        return;
+                    }
+                    
+                    allData.payments = data.recent_payments;
+                    displayPayments(data.recent_payments);
+                }
+            } catch (error) {
+                console.error('Error loading overview:', error);
+                showAlert('Failed to load recent payments', 'error');
+            }
+        }
+
+        // Display payments with filter
+        function displayPayments(payments) {
+            const tbody = document.getElementById('recentPaymentsTable');
+            tbody.innerHTML = '';
+            
+            payments.forEach(payment => {
+                const row = document.createElement('tr');
+                const date = payment.created_at ? new Date(payment.created_at).toLocaleString() : 'N/A';
+                const receipt = payment.mpesa_receipt || 'N/A';
+                const index = payment.kcse_index || 'N/A';
+                const amount = payment.amount || 100;
+                const status = payment.status || 'completed';
+                const isManual = payment.manual_payment ? '<span class="badge badge-purple">Manual</span>' : '<span class="badge badge-success">M-Pesa</span>';
+                
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td><strong>${receipt}</strong></td>
+                    <td>${index}</td>
+                    <td>Ksh ${amount}</td>
+                    <td><span class="badge badge-success">${status}</span></td>
+                    <td>${isManual}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter payments
+        function filterPayments() {
+            const filter = document.getElementById('paymentFilter').value.toLowerCase();
+            const filtered = allData.payments.filter(p => 
+                (p.kcse_index && p.kcse_index.toLowerCase().includes(filter)) ||
+                (p.mpesa_receipt && p.mpesa_receipt.toLowerCase().includes(filter))
+            );
+            displayPayments(filtered);
+        }
+
+        // Load failed payments
+        async function loadFailedPayments() {
+            try {
+                const tbody = document.getElementById('failedPaymentsTable');
+                tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+                
+                const response = await fetch('/admin/api/failed-payments');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">Error: ${data.error}</td></tr>`;
+                    return;
+                }
+                
+                if (data.payments.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No failed payments found</td></tr>';
+                    return;
+                }
+                
+                allData.failed = data.payments;
+                displayFailedPayments(data.payments);
+                
+            } catch (error) {
+                console.error('Error loading failed payments:', error);
+                showAlert('Failed to load failed payments', 'error');
+            }
+        }
+
+        // Display failed payments
+        function displayFailedPayments(payments) {
+            const tbody = document.getElementById('failedPaymentsTable');
+            tbody.innerHTML = '';
+            
+            payments.forEach(payment => {
+                const row = document.createElement('tr');
+                const date = payment.created_at ? new Date(payment.created_at).toLocaleString() : 'N/A';
+                const index = payment.kcse_index || 'N/A';
+                const email = payment.email || 'N/A';
+                const phone = payment.phone_number || 'N/A';
+                const amount = payment.amount || 100;
+                const error = payment.result_desc || 'Payment failed';
+                
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td>${index}</td>
+                    <td>${email}</td>
+                    <td>${phone}</td>
+                    <td>Ksh ${amount}</td>
+                    <td><small class="text-danger">${error}</small></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter failed payments
+        function filterFailedPayments() {
+            const filter = document.getElementById('failedFilter').value.toLowerCase();
+            const filtered = allData.failed.filter(p => 
+                (p.kcse_index && p.kcse_index.toLowerCase().includes(filter)) ||
+                (p.phone_number && p.phone_number.toLowerCase().includes(filter)) ||
+                (p.email && p.email.toLowerCase().includes(filter))
+            );
+            displayFailedPayments(filtered);
+        }
+
+        // Load users
+        async function loadUsers(page = 1) {
+            try {
+                const tbody = document.getElementById('usersTable');
+                tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading...</td></tr>';
+                
+                const response = await fetch('/admin/api/users');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px;">Error: ${data.error}</td></tr>`;
+                    return;
+                }
+                
+                if (data.users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No users found</td></tr>';
+                    return;
+                }
+                
+                allData.users = data.users;
+                displayUsers(data.users);
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showAlert('Failed to load users', 'error');
+            }
+        }
+
+        // Display users
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTable');
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                const date = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
+                const index = user.kcse_index || 'N/A';
+                const email = user.email || 'N/A';
+                const phone = user.phone_number || 'N/A';
+                const receipt = user.payment_receipt || 'N/A';
+                
+                let statusBadge = '<span class="badge badge-danger">Not Paid</span>';
+                if (user.payment_status === 'completed') {
+                    statusBadge = '<span class="badge badge-success">Paid</span>';
+                }
+                
+                let typeBadge = 'M-Pesa';
+                if (user.manual_activation) {
+                    typeBadge = '<span class="badge badge-purple">Manual</span>';
+                }
+                
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td>${index}</td>
+                    <td>${email}</td>
+                    <td>${phone}</td>
+                    <td>${statusBadge}</td>
+                    <td><small>${receipt}</small></td>
+                    <td>${typeBadge}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser('${user.user_id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter users
+        function filterUsers() {
+            const filter = document.getElementById('userFilter').value.toLowerCase();
+            const filtered = allData.users.filter(u => 
+                (u.kcse_index && u.kcse_index.toLowerCase().includes(filter)) ||
+                (u.email && u.email.toLowerCase().includes(filter)) ||
+                (u.phone_number && u.phone_number.toLowerCase().includes(filter))
+            );
+            displayUsers(filtered);
+        }
+
+        // Load manual payments
+        async function loadManualPayments() {
+            try {
+                const response = await fetch('/admin/api/users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const manualUsers = data.users.filter(u => u.manual_activation);
+                    allData.manual = manualUsers;
+                    displayManualPayments(manualUsers);
+                }
+            } catch (error) {
+                console.error('Error loading manual payments:', error);
+            }
+        }
+
+        // Display manual payments
+        // Add this to the displayManualPayments function in admin_dashboard.html
+function displayManualPayments(users) {
+    const tbody = document.getElementById('manualPaymentsTable');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No manual payments found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        const date = user.activated_at ? new Date(user.activated_at).toLocaleDateString() : 'N/A';
+        const index = user.kcse_index || 'N/A';
+        const email = user.email || 'N/A';
+        const receipt = user.payment_receipt || 'N/A';
+        const phone = user.phone_number || 'N/A';
+        
+        // Calculate days left (30 days from activation)
+        let status = 'Active';
+        let statusClass = 'badge-success';
+        let daysLeft = 'N/A';
+        
+        if (user.manual_used) {
+            status = 'Used';
+            statusClass = 'badge-warning';
+            daysLeft = 'Expired';
+        } else if (user.manual_expired) {
+            status = 'Expired';
+            statusClass = 'badge-danger';
+            daysLeft = 'Expired';
+        } else if (user.activated_at) {
+            const activated = new Date(user.activated_at);
+            const now = new Date();
+            const diffDays = 30 - Math.floor((now - activated) / (1000 * 60 * 60 * 24));
+            daysLeft = diffDays > 0 ? `${diffDays} days` : '<span class="badge badge-danger">Expired</span>';
+            if (diffDays <= 0) {
+                status = 'Expired';
+                statusClass = 'badge-danger';
+            }
+        }
+        
+        row.innerHTML = `
+            <td>${date}</td>
+            <td>${index}</td>
+            <td>${email}</td>
+            <td>${receipt}</td>
+            <td>${phone}</td>
+            <td><span class="badge ${statusClass}">${status}</span></td>
+            <td>${daysLeft}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+        // Filter manual payments
+        function filterManualPayments() {
+            const filter = document.getElementById('manualFilter').value.toLowerCase();
+            const filtered = allData.manual.filter(u => 
+                (u.kcse_index && u.kcse_index.toLowerCase().includes(filter)) ||
+                (u.email && u.email.toLowerCase().includes(filter))
+            );
+            displayManualPayments(filtered);
+        }
+
+        // Delete failed payments
+        async function deleteFailedPayments() {
+            if (!confirm('Are you sure you want to delete ALL failed payments? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/api/delete-failed-payments', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadFailedPayments();
+                    loadStats();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting failed payments:', error);
+                showAlert('Failed to delete failed payments', 'error');
+            }
+        }
+
+        // Show manual payment modal
+        function showManualPaymentModal() {
+            document.getElementById('manualPaymentModal').classList.add('active');
+        }
+
+        // Hide manual payment modal
+        function hideManualPaymentModal() {
+            document.getElementById('manualPaymentModal').classList.remove('active');
+            document.getElementById('manualKcseIndex').value = '';
+            document.getElementById('manualEmail').value = '';
+            document.getElementById('manualReceipt').value = '';
+            document.getElementById('manualPhone').value = '';
+            document.getElementById('manualAmount').value = '100';
+        }
+
+        // Add manual payment
+        async function addManualPayment() {
+            const kcseIndex = document.getElementById('manualKcseIndex').value.trim();
+            const email = document.getElementById('manualEmail').value.trim().toLowerCase();
+            const receipt = document.getElementById('manualReceipt').value.trim().toUpperCase();
+            const phone = document.getElementById('manualPhone').value.trim();
+            const amount = document.getElementById('manualAmount').value;
+            
+            if (!kcseIndex || !email || !receipt) {
+                showAlert('KCSE Index, Email, and Receipt are required', 'error');
+                return;
+            }
+            
+            // Validate KCSE index format
+            const indexPattern = /^\d{11}\/\d{4}$/;
+            if (!indexPattern.test(kcseIndex)) {
+                showAlert('Invalid KCSE index format. Use: 12345678912/2024', 'error');
+                return;
+            }
+            
+            // Validate email
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                showAlert('Invalid email address', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/api/manual-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        kcse_index: kcseIndex,
+                        email: email,
+                        mpesa_receipt: receipt,
+                        phone_number: phone,
+                        amount: parseInt(amount)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    hideManualPaymentModal();
+                    loadStats();
+                    loadManualPayments();
+                    loadOverview();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error adding manual payment:', error);
+                showAlert('Failed to add manual payment', 'error');
+            }
+        }
+
+        // Confirm delete user
+        function confirmDeleteUser(userId) {
+            document.getElementById('deleteMessage').textContent = 'Are you sure you want to delete this user and all their data?';
+            document.getElementById('confirmDeleteBtn').onclick = () => deleteUser(userId);
+            document.getElementById('deleteConfirmModal').classList.add('active');
+        }
+
+        // Hide delete modal
+        function hideDeleteModal() {
+            document.getElementById('deleteConfirmModal').classList.remove('active');
+        }
+
+        // Delete user
+        async function deleteUser(userId) {
+            hideDeleteModal();
+            
+            try {
+                const response = await fetch(`/admin/api/user/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadUsers();
+                    loadStats();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showAlert('Failed to delete user', 'error');
+            }
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (currentTab) {
+                loadStats();
+                loadTabData(currentTab);
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

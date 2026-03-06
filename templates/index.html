@@ -16,6 +16,7 @@
             --kuccps-white: #FFFFFF;
             --kuccps-blue: #1565C0;
             --kuccps-green: #2E7D32;
+            --kuccps-purple: #7B1FA2;
         }
         
         body {
@@ -164,6 +165,24 @@
         .btn-register:hover {
             transform: translateY(-3px);
             box-shadow: 0 7px 14px rgba(46, 125, 50, 0.4);
+            color: var(--kuccps-white);
+        }
+        
+        .btn-manual {
+            background: linear-gradient(135deg, var(--kuccps-purple) 0%, #6A1B9A 100%);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            color: var(--kuccps-white);
+        }
+        
+        .btn-manual:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(123, 31, 162, 0.4);
             color: var(--kuccps-white);
         }
         
@@ -330,6 +349,14 @@
             color: var(--kuccps-black);
         }
         
+        .alert-manual {
+            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            border: none;
+            border-radius: 12px;
+            border-left: 5px solid var(--kuccps-purple);
+            color: var(--kuccps-black);
+        }
+        
         .card-footer {
             background: var(--kuccps-light-grey);
             border-top: 1px solid var(--kuccps-medium-grey);
@@ -358,7 +385,7 @@
         
         .subject-badge.grade-A { background: #e8f5e9; border-color: var(--kuccps-green); }
         .subject-badge.grade-B { background: #fff3e0; border-color: var(--kuccps-yellow); }
-        .subject-badge.grade-C { background: #f3e5f5; border-color: #7b1fa2; }
+        .subject-badge.grade-C { background: #f3e5f5; border-color: var(--kuccps-purple); }
         .subject-badge.grade-D { background: #f5f5f5; border-color: var(--kuccps-medium-grey); }
         .subject-badge.grade-E { background: #ffebee; border-color: var(--kuccps-red); }
         
@@ -400,12 +427,182 @@
             margin-left: 5px;
         }
         
+        .manual-payment-badge {
+            background: var(--kuccps-purple);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .manual-payment-indicator {
+            background: var(--kuccps-purple);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            border: 2px solid var(--kuccps-yellow);
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 0 20px;
+            z-index: 1;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--kuccps-medium-grey);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active .step-number {
+            background: var(--kuccps-red);
+            transform: scale(1.1);
+            box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.3);
+        }
+        
+        .step.completed .step-number {
+            background: var(--kuccps-green);
+        }
+        
+        .step.manual .step-number {
+            background: var(--kuccps-purple);
+        }
+        
+        .step-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--kuccps-black);
+        }
+        
+        .step.active .step-label {
+            color: var(--kuccps-red);
+            font-weight: 700;
+        }
+        
+        .step.completed .step-label {
+            color: var(--kuccps-green);
+        }
+        
+        .step.manual .step-label {
+            color: var(--kuccps-purple);
+        }
+        
+        .step-line {
+            position: absolute;
+            top: 20px;
+            left: -50%;
+            width: 100%;
+            height: 2px;
+            background: var(--kuccps-medium-grey);
+            z-index: -1;
+        }
+        
+        .step:first-child .step-line {
+            display: none;
+        }
+        
+        .quick-pay-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .mpesa-instructions {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid var(--kuccps-green);
+        }
+        
+        .user-info-bar {
+            background: linear-gradient(135deg, var(--kuccps-blue) 0%, #0D47A1 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sort-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .sort-btn {
+            background: var(--kuccps-light-grey);
+            border: 2px solid var(--kuccps-medium-grey);
+            color: var(--kuccps-black);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .sort-btn.active {
+            background: var(--kuccps-red);
+            color: var(--kuccps-white);
+            border-color: var(--kuccps-red);
+        }
+        
+        .sort-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .cluster-card.highlight {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 5px solid var(--kuccps-green);
+        }
+        
+        .cluster-card.zero {
+            background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+            border-left: 5px solid var(--kuccps-medium-grey);
+            opacity: 0.7;
+        }
+        
+        .cluster-card.manual {
+            border-left: 5px solid var(--kuccps-purple);
+        }
+        
         @media (max-width: 768px) {
             .subject-category {
                 padding: 15px;
             }
             
-            .btn-calculate, .btn-reset, .btn-register {
+            .btn-calculate, .btn-reset, .btn-register, .btn-manual {
                 padding: 12px 25px;
                 font-size: 1rem;
                 width: 100%;
@@ -419,6 +616,14 @@
             .formula-display {
                 font-size: 0.9rem;
                 padding: 10px;
+            }
+            
+            .step {
+                padding: 0 10px;
+            }
+            
+            .step-label {
+                font-size: 0.8rem;
             }
         }
         
@@ -442,124 +647,6 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(0,0,0,0.25);
         }
-        
-        .sort-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .sort-btn {
-            background: var(--kuccps-light-grey);
-            border: 2px solid var(--kuccps-medium-grey);
-            color: var(--kuccps-black);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .sort-btn.active {
-            background: var(--kuccps-red);
-            color: var(--kuccps-white);
-            border-color: var(--kuccps-red);
-        }
-        
-        .sort-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .cluster-card.highlight {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-            border-left: 5px solid var(--kuccps-green);
-        }
-        
-        .cluster-card.zero {
-            background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
-            border-left: 5px solid var(--kuccps-medium-grey);
-        }
-        
-        .user-info-bar {
-            background: linear-gradient(135deg, var(--kuccps-blue) 0%, #0D47A1 100%);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .payment-modal-content {
-            padding: 20px;
-        }
-        
-        .mpesa-instructions {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-            border-left: 4px solid var(--kuccps-green);
-        }
-        
-        .quick-pay-section {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 25px;
-            border: 2px solid #dee2e6;
-        }
-        
-        .step-indicator {
-            display: flex;
-            justify-content: center;
-            margin: 30px 0;
-        }
-        
-        .step {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            padding: 0 20px;
-        }
-        
-        .step-number {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--kuccps-medium-grey);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .step.active .step-number {
-            background: var(--kuccps-red);
-        }
-        
-        .step.completed .step-number {
-            background: var(--kuccps-green);
-        }
-        
-        .step-line {
-            position: absolute;
-            top: 20px;
-            left: -50%;
-            width: 100%;
-            height: 2px;
-            background: var(--kuccps-medium-grey);
-            z-index: -1;
-        }
-        
-        .step:first-child .step-line {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -582,28 +669,36 @@
                     <div class="step-indicator">
                         <div class="step completed">
                             <div class="step-number">1</div>
-                            <span>Enter Grades</span>
+                            <span class="step-label">Enter Grades</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step active">
                             <div class="step-number">2</div>
-                            <span>Your Details</span>
+                            <span class="step-label">Your Details</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step">
                             <div class="step-number">3</div>
-                            <span>Payment</span>
+                            <span class="step-label">Payment</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step">
                             <div class="step-number">4</div>
-                            <span>Results</span>
+                            <span class="step-label">Results</span>
                         </div>
+                    </div>
+                    
+                    <!-- Manual Payment Indicator (Hidden by default) -->
+                    <div id="manualPaymentIndicator" class="manual-payment-indicator" style="display: none;">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>✓ Manual Payment Verified!</strong>
+                        <p class="mb-0 mt-2">You can proceed directly to calculation without M-Pesa payment.</p>
                     </div>
                     
                     <div class="alert alert-info mb-4">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Important:</strong> You need to register and pay Ksh 100 to calculate your cluster points.
+                        <span id="manualPaymentNote" style="display: none;"> However, a manual payment has been found for your account.</span>
                     </div>
                     
                     <form id="userDetailsForm">
@@ -614,7 +709,8 @@
                                         <i class="fas fa-id-card me-1"></i> KCSE Index Number
                                     </label>
                                     <input type="text" class="form-control" id="user_kcse_index" 
-                                           placeholder="12345678912/2024" required>
+                                           placeholder="12345678912/2024" required
+                                           onblur="checkManualPayment(this.value)">
                                     <div class="form-text">Format: 11 digits followed by /year</div>
                                 </div>
                             </div>
@@ -624,7 +720,8 @@
                                         <i class="fas fa-envelope me-1"></i> Email Address
                                     </label>
                                     <input type="email" class="form-control" id="user_email" 
-                                           placeholder="your.email@example.com" required>
+                                           placeholder="your.email@example.com" required
+                                           onblur="checkManualPayment(this.value)">
                                 </div>
                             </div>
                         </div>
@@ -675,22 +772,22 @@
                     <div class="step-indicator" style="margin: 0 0 20px 0; font-size: 0.9rem;">
                         <div class="step completed">
                             <div class="step-number">1</div>
-                            <span>Grades</span>
+                            <span class="step-label">Grades</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step completed">
                             <div class="step-number">2</div>
-                            <span>Details</span>
+                            <span class="step-label">Details</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step active">
                             <div class="step-number">3</div>
-                            <span>Payment</span>
+                            <span class="step-label">Payment</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step">
                             <div class="step-number">4</div>
-                            <span>Results</span>
+                            <span class="step-label">Results</span>
                         </div>
                     </div>
                     
@@ -751,31 +848,31 @@
             
             <div class="card-body p-4">
                 <!-- Step Indicator -->
-                <div class="step-indicator">
-                    <div class="step active">
+                <div class="step-indicator" id="mainStepIndicator">
+                    <div class="step active" id="step1">
                         <div class="step-number">1</div>
-                        <span>Enter Grades</span>
+                        <span class="step-label">Enter Grades</span>
                         <div class="step-line"></div>
                     </div>
-                    <div class="step">
+                    <div class="step" id="step2">
                         <div class="step-number">2</div>
-                        <span>Your Details</span>
+                        <span class="step-label">Your Details</span>
                         <div class="step-line"></div>
                     </div>
-                    <div class="step">
+                    <div class="step" id="step3">
                         <div class="step-number">3</div>
-                        <span>Payment</span>
+                        <span class="step-label">Payment</span>
                         <div class="step-line"></div>
                     </div>
-                    <div class="step">
+                    <div class="step" id="step4">
                         <div class="step-number">4</div>
-                        <span>Results</span>
+                        <span class="step-label">Results</span>
                     </div>
                 </div>
                 
                 <!-- User Status Display -->
                 <div id="userStatusBar" class="alert alert-info" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
                         <div>
                             <i class="fas fa-user-check me-2"></i>
                             <span id="userStatusText"></span>
@@ -793,14 +890,25 @@
                 
                 <!-- Already Paid? Retrieve Results -->
                 <div class="alert alert-info" style="margin-bottom: 25px;">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
                         <div>
                             <h5 class="mb-1"><i class="fas fa-search me-2"></i>Already Paid? Retrieve Your Results</h5>
                             <p class="mb-0">Enter your KCSE index and M-Pesa receipt number to view previous results</p>
                         </div>
-                        <button class="btn btn-primary" onclick="showRetrieveModal()">
+                        <button class="btn btn-primary mt-2 mt-md-0" onclick="showRetrieveModal()">
                             <i class="fas fa-search me-2"></i> Retrieve Results
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Manual Payment Banner (Appears when manual payment detected) -->
+                <div id="manualPaymentBanner" class="alert-manual" style="display: none; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3" style="color: var(--kuccps-purple);"></i>
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-hand-holding-usd me-2"></i>Manual Payment Detected</h5>
+                            <p class="mb-0" id="manualPaymentMessage">A manual payment has been found for your account. You can proceed directly to calculation.</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -934,7 +1042,7 @@
                                         <option value="B-">B- (8 points)</option>
                                         <option value="C+">C+ (7 points)</option>
                                         <option value="C">C (6 points)</option>
-                                        <option value="C  -">C- (5 points)</option>
+                                        <option value="C-">C- (5 points)</option>
                                         <option value="D+">D+ (4 points)</option>
                                         <option value="D">D (3 points)</option>
                                         <option value="D-">D- (2 points)</option>
@@ -1112,7 +1220,7 @@
                         </div>
                     </div>
                     
-                   <!-- Technical Subjects (Group IV) -->
+                    <!-- Technical Subjects (Group IV) -->
                     <div class="subject-category">
                         <h4 class="category-title"><i class="fas fa-cogs"></i> Technical Subjects</h4>
                         <div class="row">
@@ -1466,7 +1574,6 @@
                         </div>
                     </div>
                     
-                    
                     <!-- Action Buttons -->
                     <div class="text-center mt-5 mb-4">
                         <button type="submit" class="btn btn-calculate me-3" id="calculateBtn">
@@ -1484,22 +1591,22 @@
                     <div class="step-indicator">
                         <div class="step completed">
                             <div class="step-number">1</div>
-                            <span>Grades</span>
+                            <span class="step-label">Grades</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step completed">
                             <div class="step-number">2</div>
-                            <span>Details</span>
+                            <span class="step-label">Details</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step completed">
                             <div class="step-number">3</div>
-                            <span>Payment</span>
+                            <span class="step-label">Payment</span>
                             <div class="step-line"></div>
                         </div>
                         <div class="step active">
                             <div class="step-number">4</div>
-                            <span>Results</span>
+                            <span class="step-label">Results</span>
                         </div>
                     </div>
                     
@@ -1581,6 +1688,12 @@
     let userData = null;
     let hasPaid = false;
     let currentGrades = null;
+    let manualPaymentData = {
+        hasManualPayment: false,
+        user_id: null,
+        kcse_index: null,
+        email: null
+    };
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -1624,6 +1737,29 @@
         currentGrades = null;
     }
 
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert at the top of the card body
+        const cardBody = document.querySelector('.card-body');
+        cardBody.insertBefore(notification, cardBody.firstChild);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
     // Show user details modal (Step 2)
     function showUserDetailsModal() {
         const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
@@ -1633,6 +1769,16 @@
         document.getElementById('user_kcse_index').value = '';
         document.getElementById('user_email').value = '';
         document.getElementById('user_phone_number').value = '';
+        
+        // Hide manual payment indicator
+        document.getElementById('manualPaymentIndicator').style.display = 'none';
+        document.getElementById('manualPaymentNote').style.display = 'none';
+        
+        // Reset button text
+        const continueBtn = document.getElementById('continueToPaymentBtn');
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)';
+        continueBtn.classList.remove('btn-manual');
+        continueBtn.classList.add('btn-register');
     }
 
     // Show payment modal (Step 3)
@@ -1682,6 +1828,28 @@
                 const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
                 userDetailsModal.hide();
                 
+                // Check if this is a manual payment
+                if (data.has_manual_payment) {
+                    paymentStatusText.textContent = 'Manual Payment Verified!';
+                    paymentInstructions.textContent = 'You have a manual payment. Redirecting to calculation...';
+                    
+                    // Store user data
+                    userData = {
+                        kcse_index: kcseIndex,
+                        email: email,
+                        user_id: data.user_id,
+                        payment_method: 'manual'
+                    };
+                    
+                    // Calculate points after 2 seconds
+                    setTimeout(() => {
+                        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                        paymentModal.hide();
+                        calculatePointsAfterPayment();
+                    }, 2000);
+                    return;
+                }
+                
                 // If local test mode, simulate payment and calculate
                 if (data.local_test_mode) {
                     paymentStatusText.textContent = 'Local Test Mode - Simulating Payment';
@@ -1696,7 +1864,8 @@
                         userData = {
                             kcse_index: kcseIndex,
                             email: email,
-                            user_id: data.user_id
+                            user_id: data.user_id,
+                            payment_method: 'simulated'
                         };
                         
                         // Calculate points after payment
@@ -1719,7 +1888,8 @@
                     kcse_index: kcseIndex,
                     email: email,
                     user_id: data.user_id,
-                    checkout_request_id: data.checkout_request_id
+                    checkout_request_id: data.checkout_request_id,
+                    payment_method: 'mpesa'
                 };
                 
                 // Start checking payment status
@@ -1797,7 +1967,7 @@
         }, 300000); // 5 minutes
     }
 
-    // Calculate points after payment - FIXED VERSION
+    // Calculate points after payment
     async function calculatePointsAfterPayment() {
         showLoading(true, 'Calculating your cluster points...');
         
@@ -1808,7 +1978,7 @@
             console.log('📊 Sending grades for calculation:', grades);
             
             if (!grades) {
-                alert('No grades found. Please enter your grades first.');
+                showNotification('No grades found. Please enter your grades first.', 'error');
                 showLoading(false);
                 return;
             }
@@ -1831,17 +2001,24 @@
                 displayResults(data, userData);
                 
                 // Show success message
-                showSuccessMessage(`Results calculated for ${userData.kcse_index}`);
+                const paymentMethod = userData?.payment_method || 'mpesa';
+                const message = paymentMethod === 'manual' 
+                    ? `Results calculated for ${userData.kcse_index} (Manual Payment)` 
+                    : `Results calculated for ${userData.kcse_index}`;
+                showNotification(message, 'success');
+                
+                // Update step indicator
+                updateStepIndicator(4);
             } else {
                 if (data.error && (data.error.includes('Payment required') || data.error.includes('Registration required'))) {
-                    alert('Payment verification failed. Please try again.');
+                    showNotification('Payment verification failed. Please try again.', 'error');
                     showUserDetailsModal();
                 } else {
-                    alert('Error calculating points: ' + (data.error || 'Unknown error'));
+                    showNotification('Error calculating points: ' + (data.error || 'Unknown error'), 'error');
                 }
             }
         } catch (error) {
-            alert('Network error: ' + error.message);
+            showNotification('Network error: ' + error.message, 'error');
             console.error('Error:', error);
         } finally {
             showLoading(false);
@@ -1865,7 +2042,7 @@
         return '<span class="points-zero">0.000</span>';
     }
 
-    // Show cluster details modal - FIXED VERSION
+    // Show cluster details modal
     function showClusterDetails(clusterId, clusterName, points, subjectsUsed) {
         const modalTitle = document.getElementById('modalTitle');
         const modalContent = document.getElementById('modalContent');
@@ -1886,7 +2063,6 @@
             
             let totalPoints = 0;
             subjectsUsed.forEach((subject, index) => {
-                // Handle both old and new data structures
                 const subjectName = subject.subject || subject.name || 'Unknown';
                 const grade = subject.grade || 'E';
                 const points = subject.points || 0;
@@ -1931,7 +2107,7 @@
         modal.show();
     }
 
-    // Display results - COMPLETELY REWRITTEN VERSION
+    // Display results
     function displayResults(data, userInfo) {
         console.log('🎯 Displaying results with data:', data);
         console.log('👤 User info:', userInfo);
@@ -1948,10 +2124,15 @@
         
         // Display user info
         if (userInfo) {
+            const paymentMethod = userInfo.payment_method || 'mpesa';
+            const paymentBadge = paymentMethod === 'manual' 
+                ? '<span class="badge" style="background: var(--kuccps-purple);">Manual Payment ✓</span>'
+                : '<span class="badge bg-success">M-Pesa Verified ✓</span>';
+            
             userInfoDisplay.innerHTML = `
-                <div>KCSE Index: <strong>${userInfo.kcse_index || 'N/A'}</strong></div>
+                <div>KCSE Index: <strong>${userInfo.kcse_index || 'N/A'}</strong> ${paymentMethod === 'manual' ? '<span class="manual-payment-badge">Manual</span>' : ''}</div>
                 <div>Email: <strong>${userInfo.email || 'N/A'}</strong></div>
-                <div>Payment: <span class="badge bg-success">Verified ✓</span></div>
+                <div>Payment: ${paymentBadge}</div>
             `;
         }
         
@@ -1972,7 +2153,7 @@
         clusterGrid.innerHTML = '';
         topClustersGrid.innerHTML = '';
         
-        // Prepare clusters data - FIXED LOGIC
+        // Prepare clusters data
         const clusters = [];
         
         // Check if we have results in the expected format
@@ -1989,8 +2170,8 @@
                         name: clusterKey,
                         points: isNaN(points) ? 0 : points,
                         pointsFormatted: isNaN(points) ? '0.000' : points.toFixed(3),
-                        description: data.details && data.details[clusterKey] ? 
-                            data.details[clusterKey].description : `Cluster ${i}`
+                        description: getClusterDescription(i),
+                        subjectsUsed: data.details && data.details[clusterKey] ? data.details[clusterKey].subjects_used : []
                     });
                 } else {
                     // If no result for this cluster, add with 0 points
@@ -1999,7 +2180,8 @@
                         name: clusterKey,
                         points: 0,
                         pointsFormatted: '0.000',
-                        description: `Cluster ${i}`
+                        description: getClusterDescription(i),
+                        subjectsUsed: []
                     });
                 }
             }
@@ -2011,16 +2193,17 @@
                     name: `Cluster ${i}`,
                     points: 0,
                     pointsFormatted: '0.000',
-                    description: `Cluster ${i}`
+                    description: getClusterDescription(i),
+                    subjectsUsed: []
                 });
             }
         }
         
         // Sort by points descending
-        clusters.sort((a, b) => b.points - a.points);
+        const sortedByPoints = [...clusters].sort((a, b) => b.points - a.points);
         
         // Get top 3 clusters (non-zero)
-        const topClusters = clusters.filter(c => c.points > 0).slice(0, 3);
+        const topClusters = sortedByPoints.filter(c => c.points > 0).slice(0, 3);
         
         // Display all clusters
         clusters.forEach((cluster) => {
@@ -2030,15 +2213,11 @@
             const clusterCard = document.createElement('div');
             clusterCard.className = `cluster-card ${cardClass}`;
             clusterCard.onclick = () => {
-                // Get details for this cluster
-                const clusterKey = `Cluster ${cluster.id}`;
-                const details = data.details && data.details[clusterKey];
-                
                 showClusterDetails(
                     cluster.id,
                     cluster.name,
                     cluster.pointsFormatted,
-                    details ? details.subjects_used : []
+                    cluster.subjectsUsed
                 );
             };
             
@@ -2048,7 +2227,7 @@
                     <div class="cluster-points">${pointsDisplay}</div>
                 </div>
                 <div class="cluster-name">${cluster.name}</div>
-                <div class="cluster-description">${getClusterDescription(cluster.id)}</div>
+                <div class="cluster-description">${cluster.description}</div>
                 ${cluster.points > 0 ? '<small class="text-muted">Click for details</small>' : '<small class="text-danger">No points - requirements not met</small>'}
             `;
             
@@ -2058,24 +2237,21 @@
         // Display top clusters if any
         if (topClusters.length > 0) {
             topClustersSection.style.display = 'block';
-            topClusters.forEach(cluster => {
+            topClusters.forEach((cluster, index) => {
                 const pointsDisplay = formatClusterPoints(cluster.pointsFormatted);
                 
                 const clusterCard = document.createElement('div');
                 clusterCard.className = 'cluster-card highlight';
                 clusterCard.onclick = () => {
-                    const clusterKey = `Cluster ${cluster.id}`;
-                    const details = data.details && data.details[clusterKey];
-                    
                     showClusterDetails(
                         cluster.id,
                         cluster.name,
                         cluster.pointsFormatted,
-                        details ? details.subjects_used : []
+                        cluster.subjectsUsed
                     );
                 };
                 
-                const rank = clusters.findIndex(c => c.id === cluster.id) + 1;
+                const rank = index + 1;
                 
                 clusterCard.innerHTML = `
                     <div class="cluster-header">
@@ -2083,7 +2259,7 @@
                         <div class="cluster-points">${pointsDisplay}</div>
                     </div>
                     <div class="cluster-name">${cluster.name}</div>
-                    <div class="cluster-description">${getClusterDescription(cluster.id)}</div>
+                    <div class="cluster-description">${cluster.description}</div>
                     <div class="text-center mt-2">
                         <span class="badge bg-success"><i class="fas fa-trophy me-1"></i> Top ${rank}</span>
                     </div>
@@ -2176,31 +2352,19 @@
         }
     }
 
-    // Show success message
-    function showSuccessMessage(message) {
-        // Remove any existing success messages
-        const existingAlerts = document.querySelectorAll('.alert-success');
-        existingAlerts.forEach(alert => alert.remove());
-        
-        // Create new success alert
-        const successAlert = document.createElement('div');
-        successAlert.className = 'alert alert-success alert-dismissible fade show';
-        successAlert.innerHTML = `
-            <i class="fas fa-check-circle me-2"></i>
-            <strong>${message}</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        // Insert after the form title
-        const formTitle = document.querySelector('h3');
-        formTitle.parentNode.insertBefore(successAlert, formTitle.nextSibling);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (successAlert.parentNode) {
-                successAlert.remove();
+    // Update step indicator
+    function updateStepIndicator(step) {
+        for (let i = 1; i <= 4; i++) {
+            const stepEl = document.getElementById(`step${i}`);
+            if (stepEl) {
+                stepEl.classList.remove('active', 'completed');
+                if (i < step) {
+                    stepEl.classList.add('completed');
+                } else if (i === step) {
+                    stepEl.classList.add('active');
+                }
             }
-        }, 5000);
+        }
     }
 
     // Show retrieve modal
@@ -2215,7 +2379,7 @@
         calculateBtn.disabled = false;
     }
 
-    // Handle user details form submission
+    // ===== UPDATED: Handle user details form submission with manual payment fix =====
     document.getElementById('userDetailsForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -2230,7 +2394,7 @@
             const indexPattern = /^\d{11}\/\d{4}$/;
             
             if (!indexPattern.test(kcseIndex)) {
-                alert('Invalid KCSE index format. Please use: 12345678912/2024');
+                showNotification('Invalid KCSE index format. Please use: 12345678912/2024', 'error');
                 continueBtn.innerHTML = originalText;
                 continueBtn.disabled = false;
                 return;
@@ -2241,7 +2405,7 @@
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             
             if (!emailPattern.test(email)) {
-                alert('Please enter a valid email address');
+                showNotification('Please enter a valid email address', 'error');
                 continueBtn.innerHTML = originalText;
                 continueBtn.disabled = false;
                 return;
@@ -2252,13 +2416,98 @@
             const phonePattern = /^(07\d{8}|2547\d{8}|01\d{8})$/;
             
             if (!phonePattern.test(phoneNumber)) {
-                alert('Please enter a valid Kenyan phone number (e.g., 0712345678 or 254712345678)');
+                showNotification('Please enter a valid Kenyan phone number (e.g., 0712345678 or 254712345678)', 'error');
                 continueBtn.innerHTML = originalText;
                 continueBtn.disabled = false;
                 return;
             }
             
-            // All validation passed, show payment modal
+            // CHECK FOR MANUAL PAYMENT BEFORE PROCEEDING
+            if (manualPaymentData.hasManualPayment) {
+                console.log('✅ Manual payment detected, proceeding directly to calculation');
+                
+                // Close the modal
+                const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
+                userDetailsModal.hide();
+                
+                // Show loading
+                showLoading(true, 'Manual payment verified. Calculating your results...');
+                
+                try {
+                    // First register the user (this will detect manual payment on backend)
+                    const registerResponse = await fetch('/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            kcse_index: kcseIndex,
+                            email: email,
+                            phone_number: phoneNumber
+                        })
+                    });
+                    
+                    const registerData = await registerResponse.json();
+                    console.log('📝 Registration response:', registerData);
+                    
+                    if (registerData.success) {
+                        // Store user data
+                        userData = {
+                            kcse_index: kcseIndex,
+                            email: email,
+                            user_id: registerData.user_id,
+                            payment_method: 'manual'
+                        };
+                        
+                        // Get grades from sessionStorage
+                        const grades = JSON.parse(sessionStorage.getItem('grades'));
+                        
+                        if (!grades) {
+                            showNotification('No grades found. Please enter your grades first.', 'error');
+                            showLoading(false);
+                            return;
+                        }
+                        
+                        // Calculate points directly
+                        const calculateResponse = await fetch('/calculate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify(grades)
+                        });
+                        
+                        const calculateData = await calculateResponse.json();
+                        console.log('📊 Calculation response:', calculateData);
+                        
+                        if (calculateData.success) {
+                            // Display results
+                            displayResults(calculateData, userData);
+                            
+                            // Show success message
+                            showNotification(`Results calculated for ${kcseIndex} (Manual Payment)`, 'success');
+                            
+                            // Update step indicator
+                            updateStepIndicator(4);
+                        } else {
+                            showNotification('Error calculating points: ' + (calculateData.error || 'Unknown error'), 'error');
+                        }
+                    } else {
+                        showNotification(registerData.error || 'Registration failed', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotification('Network error: ' + error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+                
+                return;
+            }
+            
+            // NORMAL PAYMENT FLOW (only if no manual payment)
+            // Close user details modal
             const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
             userDetailsModal.hide();
             
@@ -2268,7 +2517,7 @@
             }, 500);
             
         } catch (error) {
-            alert('Error: ' + error.message);
+            showNotification('Error: ' + error.message, 'error');
             continueBtn.innerHTML = originalText;
             continueBtn.disabled = false;
         }
@@ -2291,7 +2540,14 @@
         
         // Check if at least Mathematics and English are filled
         if (!grades.mathematics || !grades.english) {
-            alert('Please enter grades for at least Mathematics and English.');
+            showNotification('Please enter grades for at least Mathematics and English.', 'warning');
+            return;
+        }
+        
+        // Check at least 7 subjects total
+        const subjectCount = Object.keys(grades).length;
+        if (subjectCount < 7) {
+            showNotification(`Please enter at least 7 subjects (you have ${subjectCount})`, 'warning');
             return;
         }
         
@@ -2299,11 +2555,14 @@
         sessionStorage.setItem('grades', JSON.stringify(grades));
         currentGrades = grades;
         
+        // Update step indicator
+        updateStepIndicator(2);
+        
         // Show user details modal (Step 2)
         showUserDetailsModal();
     });
 
-    // Handle retrieve form submission - FIXED VERSION
+    // Handle retrieve form submission
     document.getElementById('retrieveForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -2335,21 +2594,25 @@
                 // Display retrieved results
                 userData = {
                     kcse_index: data.kcse_index,
-                    email: data.email
+                    email: data.email,
+                    payment_method: 'mpesa'
                 };
                 
                 displayResults(data, userData);
                 
                 // Show success message
-                showSuccessMessage(`Results retrieved for ${data.kcse_index}`);
+                showNotification(`Results retrieved for ${data.kcse_index}`, 'success');
                 
                 // Show results section
                 document.getElementById('resultsSection').style.display = 'block';
+                
+                // Update step indicator
+                updateStepIndicator(4);
             } else {
-                alert('Error: ' + (data.error || 'Failed to retrieve results'));
+                showNotification('Error: ' + (data.error || 'Failed to retrieve results'), 'error');
             }
         } catch (error) {
-            alert('Network error: ' + error.message);
+            showNotification('Network error: ' + error.message, 'error');
             console.error('Retrieve error:', error);
         } finally {
             retrieveBtn.innerHTML = originalText;
@@ -2426,7 +2689,86 @@
 
     // Download results as PDF
     function downloadResults() {
-        alert('PDF download feature will be implemented in the backend. Results are saved to your account.');
+        showNotification('PDF download feature will be available soon. Your results are saved to your account.', 'info');
+    }
+
+    // ===== UPDATED: Manual payment check =====
+    async function checkManualPayment(identifier) {
+        if (!identifier || identifier.length < 5) return false;
+        
+        try {
+            const response = await fetch('/admin/api/check-manual-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier: identifier })
+            });
+            
+            const data = await response.json();
+            console.log('🔍 Manual payment check response:', data);
+            
+            if (data.success && data.has_manual_payment) {
+                // Show manual payment found message
+                showNotification(`✓ Manual payment found for ${identifier}! You can proceed directly to calculation.`, 'success');
+                
+                // Store manual payment data
+                manualPaymentData = {
+                    hasManualPayment: true,
+                    user_id: data.user_id,
+                    kcse_index: data.kcse_index,
+                    email: data.email
+                };
+                
+                console.log('✅ Manual payment data stored:', manualPaymentData);
+                
+                // Show manual payment indicator in modal
+                document.getElementById('manualPaymentIndicator').style.display = 'block';
+                document.getElementById('manualPaymentNote').style.display = 'inline';
+                
+                // Show manual payment banner on main page
+                const banner = document.getElementById('manualPaymentBanner');
+                document.getElementById('manualPaymentMessage').innerHTML = `A manual payment has been found for <strong>${identifier}</strong>. You can proceed directly to calculation without M-Pesa payment.`;
+                banner.style.display = 'block';
+                
+                // Update continue button
+                const continueBtn = document.getElementById('continueToPaymentBtn');
+                continueBtn.innerHTML = '<i class="fas fa-calculator me-2"></i> Proceed to Calculation (Manual Payment)';
+                continueBtn.classList.remove('btn-register');
+                continueBtn.classList.add('btn-manual');
+                
+                // Pre-fill form if empty
+                if (!document.getElementById('user_kcse_index').value && data.kcse_index) {
+                    document.getElementById('user_kcse_index').value = data.kcse_index;
+                }
+                if (!document.getElementById('user_email').value && data.email) {
+                    document.getElementById('user_email').value = data.email;
+                }
+                
+                return true;
+            } else {
+                // No manual payment found
+                manualPaymentData = {
+                    hasManualPayment: false,
+                    user_id: null,
+                    kcse_index: null,
+                    email: null
+                };
+                
+                // Hide manual payment indicators
+                document.getElementById('manualPaymentIndicator').style.display = 'none';
+                document.getElementById('manualPaymentNote').style.display = 'none';
+                document.getElementById('manualPaymentBanner').style.display = 'none';
+                
+                // Reset continue button
+                const continueBtn = document.getElementById('continueToPaymentBtn');
+                continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)';
+                continueBtn.classList.remove('btn-manual');
+                continueBtn.classList.add('btn-register');
+            }
+        } catch (error) {
+            console.error('Manual payment check error:', error);
+        }
+        
+        return false;
     }
 
     // Initialize sort buttons

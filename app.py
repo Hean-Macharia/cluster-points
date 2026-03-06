@@ -806,7 +806,116 @@ def register():
         
         print(f"✅ Input validation passed")
         
-        # Check if user already exists
+        # ===== CHECK FOR MANUAL PAYMENT FIRST =====
+        try:
+            # Check by KCSE index OR email for manual activation (only active ones)
+            manual_user = users_collection.find_one({
+                '$or': [
+                    {'kcse_index': kcse_index},
+                    {'email': email}
+                ],
+                'manual_activation': True,
+                'manual_expired': {'$ne': True}  # Only non-expired
+            })
+            
+            if manual_user:
+                activated_at = manual_user.get('activated_at')
+                if activated_at:
+                    days_active = (datetime.now() - activated_at).days
+                    # Manual payment valid for 30 days and not used
+                    if days_active <= 30 and not manual_user.get('manual_used'):
+                        print(f"✅ Active manual payment found for user: {manual_user['user_id']}")
+                        
+                        # Store in session
+                        session['user_id'] = manual_user['user_id']
+                        session['kcse_index'] = kcse_index
+                        session['email'] = email
+                        
+                        # Update user with new contact info if needed
+                        update_data = {
+                            'email': email,
+                            'phone_number': formatted_phone,
+                            'updated_at': datetime.now(),
+                            'last_login': datetime.now()
+                        }
+                        
+                        # Only update if fields are different
+                        if manual_user.get('email') != email or manual_user.get('phone_number') != formatted_phone:
+                            users_collection.update_one(
+                                {'user_id': manual_user['user_id']},
+                                {'$set': update_data}
+                            )
+                            print(f"✅ Updated user contact info")
+                        
+                        return jsonify({
+                            'success': True,
+                            'message': 'Manual payment verified. You can proceed to calculate your cluster points.',
+                            'user_id': manual_user['user_id'],
+                            'has_manual_payment': True,
+                            'can_calculate': True,
+                            'payment_method': 'manual',
+                            'payment_receipt': manual_user.get('payment_receipt', 'MANUAL-ACTIVATION')
+                        })
+                    else:
+                        # Manual payment expired or already used
+                        print(f"⚠️ Manual payment expired or already used for user: {manual_user['user_id']} ({days_active} days old, used: {manual_user.get('manual_used', False)})")
+                        
+                        # Mark as expired
+                        users_collection.update_one(
+                            {'user_id': manual_user['user_id']},
+                            {'$set': {
+                                'manual_activation': False, 
+                                'manual_expired': True,
+                                'expired_at': datetime.now(),
+                                'expiry_reason': 'timeout' if days_active > 30 else 'used'
+                            }}
+                        )
+                        
+                        # Return response indicating manual payment is no longer valid
+                        return jsonify({
+                            'success': False,
+                            'error': 'Your manual payment has expired or already been used. Please make a new payment.',
+                            'manual_payment_expired': True
+                        }), 402
+                else:
+                    # No activation date, mark as invalid
+                    print(f"⚠️ Manual payment has no activation date for user: {manual_user['user_id']}")
+                    users_collection.update_one(
+                        {'user_id': manual_user['user_id']},
+                        {'$set': {'manual_activation': False, 'manual_invalid': True}}
+                    )
+            
+            # Check if there's an expired/used manual payment (for informational purposes)
+            expired_manual = users_collection.find_one({
+                '$or': [
+                    {'kcse_index': kcse_index},
+                    {'email': email}
+                ],
+                'manual_used': True
+            })
+            if expired_manual:
+                print(f"ℹ️ User has already used a manual payment: {expired_manual.get('user_id')}")
+                
+            # Check for expired by time
+            time_expired_manual = users_collection.find_one({
+                '$or': [
+                    {'kcse_index': kcse_index},
+                    {'email': email}
+                ],
+                'manual_expired': True,
+                'manual_used': {'$ne': True}
+            })
+            if time_expired_manual:
+                print(f"ℹ️ User has a time-expired manual payment: {time_expired_manual.get('user_id')}")
+                
+        except Exception as e:
+            print(f"⚠️ Manual payment check error: {e}")
+            import traceback
+            traceback.print_exc()
+            # Continue with normal flow if manual payment check fails
+        
+        # ===== NORMAL PAYMENT FLOW =====
+        # Check if user already exists in regular flow
         existing_user = users_collection.find_one({
             '$or': [
                 {'kcse_index': kcse_index},
@@ -817,19 +926,28 @@ def register():
         user_id = None
         
         if existing_user:
-            print(f"⚠️  User already exists: {existing_user.get('user_id')}")
+            print(f"⚠️ User already exists: {existing_user.get('user_id')}")
             user_id = existing_user['user_id']
             
-            # Check if already paid
-            if existing_user.get('payment_status') == 'completed':
+            # Check if already paid via M-Pesa (not manual)
+            if existing_user.get('payment_status') == 'completed' and not existing_user.get('manual_activation'):
                 session['user_id'] = user_id
                 session['kcse_index'] = kcse_index
                 session['email'] = email
+                
+                # Update last login
+                users_collection.update_one(
+                    {'user_id': user_id},
+                    {'$set': {'last_login': datetime.now()}}
+                )
+                
                 return jsonify({
                     'success': True,
                     'message': 'User already registered and paid',
                     'user_id': user_id,
-                    'already_paid': True
+                    'already_paid': True,
+                    'can_calculate': True,
+                    'payment_method': 'mpesa'
                 })
             else:
                 # Update user with new phone number if changed
@@ -840,6 +958,7 @@ def register():
                         'updated_at': datetime.now()
                     }}
                 )
+                print(f"✅ Updated existing user contact info")
         else:
             # Create new user record
             user_id = str(uuid.uuid4())
@@ -850,11 +969,14 @@ def register():
                 'phone_number': formatted_phone,
                 'created_at': datetime.now(),
                 'payment_status': 'pending',
-                'last_login': datetime.now()
+                'last_login': datetime.now(),
+                'manual_activation': False,
+                'manual_used': False,
+                'manual_expired': False
             }
             
             users_collection.insert_one(user_data)
-            print(f"✅ User created: {user_id}")
+            print(f"✅ New user created: {user_id}")
         
         # Store in session
         session['user_id'] = user_id
@@ -888,7 +1010,9 @@ def register():
                 'mpesa_receipt': mpesa_receipt,
                 'transaction_date': datetime.now().strftime('%Y%m%d%H%M%S'),
                 'created_at': datetime.now(),
-                'updated_at': datetime.now()
+                'updated_at': datetime.now(),
+                'manual_payment': False,
+                'simulated': True
             }
             
             payments_collection.insert_one(payment_data)
@@ -916,7 +1040,8 @@ def register():
                 'checkout_request_id': checkout_request_id,
                 'local_test_mode': True,
                 'payment_simulated': True,
-                'can_calculate': True
+                'can_calculate': True,
+                'payment_method': 'simulated'
             })
         
         # PRODUCTION: Initiate actual M-Pesa payment
@@ -942,7 +1067,8 @@ def register():
                     'merchant_request_id': payment_response.get('MerchantRequestID'),
                     'status': 'pending',
                     'created_at': datetime.now(),
-                    'updated_at': datetime.now()
+                    'updated_at': datetime.now(),
+                    'manual_payment': False
                 }
                 
                 payments_collection.insert_one(payment_data)
@@ -965,7 +1091,9 @@ def register():
                     'user_id': user_id,
                     'checkout_request_id': payment_response.get('CheckoutRequestID'),
                     'merchant_request_id': payment_response.get('MerchantRequestID'),
-                    'response_description': payment_response.get('ResponseDescription')
+                    'response_description': payment_response.get('ResponseDescription'),
+                    'can_calculate': False,
+                    'payment_method': 'mpesa'
                 })
             else:
                 error_msg = payment_response.get('ResponseDescription', 'Payment initiation failed')
@@ -987,7 +1115,6 @@ def register():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-
 @app.route('/check_payment/<checkout_request_id>')
 def check_payment(checkout_request_id):
     """Check payment status"""
@@ -1309,6 +1436,31 @@ def calculate():
         print(f"Result ID: {result_id}")
         print(f"Aggregate Points: {aggregate_points}")
         
+        # ===== NEW: EXPIRE MANUAL PAYMENT AFTER RESULTS ARE SAVED =====
+        if user.get('manual_activation'):
+            # Mark manual payment as expired immediately after results are saved
+            users_collection.update_one(
+                {'user_id': user_id},
+                {'$set': {
+                    'manual_activation': False,
+                    'manual_used': True,
+                    'manual_used_at': datetime.now(),
+                    'manual_expired': True,
+                    'payment_status': 'completed'  # Keep payment status as completed for history
+                }}
+            )
+            print(f"✅ Manual payment marked as used/expired for user: {user_id}")
+            
+            # Also update the payment record
+            payments_collection.update_many(
+                {'user_id': user_id, 'manual_payment': True},
+                {'$set': {
+                    'manual_used': True,
+                    'manual_used_at': datetime.now(),
+                    'status': 'completed'  # Keep status as completed for history
+                }}
+            )
+        
         return jsonify({
             'success': True,
             'results': results,
@@ -1432,7 +1584,7 @@ def health():
             'fixed_group_logic': True
         }
     })
-# ===== ADMIN SETUP =====
+# ===== ADMIN ROUTES =====
 
 # Admin credentials
 ADMIN_CREDENTIALS = {
@@ -1448,6 +1600,341 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username == ADMIN_CREDENTIALS['username'] and password == ADMIN_CREDENTIALS['password']:
+            session['admin_logged_in'] = True
+            return redirect('/admin/dashboard')
+        else:
+            return render_template('admin_login.html', error='Invalid credentials')
+    
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_logged_in', None)
+    return redirect('/admin/login')
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard"""
+    return render_template('admin_dashboard.html')
+
+@app.route('/admin/api/stats')
+@admin_required
+def admin_stats():
+    """Get admin dashboard statistics"""
+    try:
+        # Total successful payments
+        successful_payments = list(payments_collection.find({'status': 'completed'}))
+        total_successful = len(successful_payments)
+        total_amount = sum(p.get('amount', PAYMENT_AMOUNT) for p in successful_payments)
+        
+        # Failed payments
+        failed_payments_count = payments_collection.count_documents({'status': 'failed'})
+        
+        # Total users
+        total_users = users_collection.count_documents({})
+        
+        # Users with completed payments
+        paid_users = users_collection.count_documents({'payment_status': 'completed'})
+        
+        # Recent payments (last 10)
+        recent_payments = list(payments_collection.find(
+            {'status': 'completed'}, 
+            sort=[('created_at', -1)],
+            limit=10
+        ))
+        
+        for payment in recent_payments:
+            if '_id' in payment:
+                payment['_id'] = str(payment['_id'])
+            if 'created_at' in payment and payment['created_at']:
+                payment['created_at'] = payment['created_at'].isoformat()
+            
+            # Get user info
+            user = users_collection.find_one({'user_id': payment.get('user_id')})
+            if user:
+                payment['kcse_index'] = user.get('kcse_index', 'N/A')
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_successful': total_successful,
+                'total_amount': total_amount,
+                'failed_payments': failed_payments_count,
+                'total_users': total_users,
+                'paid_users': paid_users,
+                'pending_users': total_users - paid_users
+            },
+            'recent_payments': recent_payments
+        })
+    except Exception as e:
+        print(f"❌ Admin stats error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/failed-payments')
+@admin_required
+def admin_failed_payments():
+    """Get list of failed payments"""
+    try:
+        failed_payments = list(payments_collection.find(
+            {'status': 'failed'},
+            sort=[('created_at', -1)]
+        ))
+        
+        for payment in failed_payments:
+            if '_id' in payment:
+                payment['_id'] = str(payment['_id'])
+            if 'created_at' in payment and payment['created_at']:
+                payment['created_at'] = payment['created_at'].isoformat()
+            
+            # Get user info
+            user = users_collection.find_one({'user_id': payment.get('user_id')})
+            if user:
+                payment['email'] = user.get('email', 'N/A')
+                payment['kcse_index'] = user.get('kcse_index', 'N/A')
+        
+        return jsonify({
+            'success': True,
+            'payments': failed_payments
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/delete-failed-payments', methods=['POST'])
+@admin_required
+def admin_delete_failed_payments():
+    """Delete all failed payments"""
+    try:
+        result = payments_collection.delete_many({'status': 'failed', 'manual_payment': {'$ne': True}})
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully deleted {result.deleted_count} failed payments',
+            'deleted_count': result.deleted_count
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/manual-payment', methods=['POST'])
+@admin_required
+def admin_manual_payment():
+    """Add manual payment for a user"""
+    try:
+        data = request.json
+        
+        kcse_index = data.get('kcse_index', '').strip()
+        email = data.get('email', '').strip().lower()
+        mpesa_receipt = data.get('mpesa_receipt', '').strip().upper()
+        phone_number = data.get('phone_number', '').strip()
+        amount = int(data.get('amount', PAYMENT_AMOUNT))
+        
+        # Validate inputs
+        if not kcse_index or not email or not mpesa_receipt:
+            return jsonify({'success': False, 'error': 'KCSE Index, Email, and M-Pesa Receipt are required'}), 400
+        
+        # Check if receipt already exists
+        existing_payment = payments_collection.find_one({'mpesa_receipt': mpesa_receipt})
+        if existing_payment:
+            return jsonify({'success': False, 'error': 'M-Pesa receipt already exists in system'}), 400
+        
+        # Check if user exists
+        user = users_collection.find_one({
+            '$or': [
+                {'kcse_index': kcse_index},
+                {'email': email}
+            ]
+        })
+        
+        user_id = None
+        if user:
+            # Check if user already used a manual payment
+            if user.get('manual_used'):
+                return jsonify({'success': False, 'error': 'User has already used a manual payment'}), 400
+                
+            user_id = user['user_id']
+            # Update user with manual payment status
+            users_collection.update_one(
+                {'user_id': user_id},
+                {'$set': {
+                    'payment_status': 'completed',
+                    'payment_date': datetime.now(),
+                    'payment_receipt': mpesa_receipt,
+                    'manual_activation': True,
+                    'manual_used': False,
+                    'manual_expired': False,
+                    'activated_by': 'admin',
+                    'activated_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }}
+            )
+            print(f"✅ Updated existing user {user_id} with manual payment")
+        else:
+            # Create new user
+            user_id = str(uuid.uuid4())
+            user_data = {
+                'user_id': user_id,
+                'kcse_index': kcse_index,
+                'email': email,
+                'phone_number': phone_number or 'N/A',
+                'created_at': datetime.now(),
+                'payment_status': 'completed',
+                'payment_date': datetime.now(),
+                'payment_receipt': mpesa_receipt,
+                'manual_activation': True,
+                'manual_used': False,
+                'manual_expired': False,
+                'activated_by': 'admin',
+                'activated_at': datetime.now(),
+                'last_login': None
+            }
+            users_collection.insert_one(user_data)
+            print(f"✅ Created new user {user_id} with manual payment")
+        
+        # Create manual payment record
+        transaction_id = str(uuid.uuid4())
+        payment_data = {
+            'transaction_id': transaction_id,
+            'user_id': user_id,
+            'kcse_index': kcse_index,
+            'email': email,
+            'phone_number': phone_number or 'N/A',
+            'amount': amount,
+            'mpesa_receipt': mpesa_receipt,
+            'status': 'completed',
+            'manual_payment': True,
+            'manual_used': False,
+            'created_at': datetime.now(),
+            'updated_at': datetime.now(),
+            'transaction_date': datetime.now().strftime('%Y%m%d%H%M%S')
+        }
+        
+        payments_collection.insert_one(payment_data)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Manual payment activated successfully for {email}. Valid for one-time use.',
+            'user_id': user_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Manual payment error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/admin/api/users')
+@admin_required
+def admin_users():
+    """Get list of all users"""
+    try:
+        users = list(users_collection.find({}, sort=[('created_at', -1)]))
+        
+        for user in users:
+            if '_id' in user:
+                user['_id'] = str(user['_id'])
+            if 'created_at' in user and user['created_at']:
+                user['created_at'] = user['created_at'].isoformat()
+            if 'payment_date' in user and user['payment_date']:
+                user['payment_date'] = user['payment_date'].isoformat()
+        
+        return jsonify({
+            'success': True,
+            'users': users
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/user/<user_id>', methods=['DELETE'])
+@admin_required
+def admin_delete_user(user_id):
+    """Delete a user and all associated data"""
+    try:
+        # Delete user
+        user_result = users_collection.delete_one({'user_id': user_id})
+        
+        # Delete payments
+        payments_result = payments_collection.delete_many({'user_id': user_id})
+        
+        # Delete results
+        results_result = results_collection.delete_many({'user_id': user_id})
+        
+        # Delete PDFs
+        pdfs_result = pdfs_collection.delete_many({'user_id': user_id})
+        
+        return jsonify({
+            'success': True,
+            'message': f'User deleted. Removed: {user_result.deleted_count} user, {payments_result.deleted_count} payments, {results_result.deleted_count} results, {pdfs_result.deleted_count} PDFs'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/check-manual-payment', methods=['POST'])
+def check_manual_payment():
+    """Check if user has manual payment (public endpoint for frontend)"""
+    try:
+        data = request.json
+        identifier = data.get('identifier', '').strip().lower()
+        
+        if not identifier:
+            return jsonify({'success': True, 'has_manual_payment': False})
+        
+        # Check if identifier is email or KCSE index
+        user = None
+        if '@' in identifier:
+            # It's an email
+            user = users_collection.find_one({
+                'email': identifier, 
+                'manual_activation': True,
+                'manual_expired': {'$ne': True},
+                'manual_used': {'$ne': True}
+            })
+        else:
+            # Assume it's KCSE index
+            user = users_collection.find_one({
+                'kcse_index': identifier, 
+                'manual_activation': True,
+                'manual_expired': {'$ne': True},
+                'manual_used': {'$ne': True}
+            })
+        
+        if user:
+            # Check if manual payment hasn't expired (e.g., not older than 30 days)
+            activated_at = user.get('activated_at')
+            if activated_at:
+                days_active = (datetime.now() - activated_at).days
+                if days_active <= 30 and not user.get('manual_used'):  # Manual payment valid for 30 days and not used
+                    print(f"✅ Manual payment found for {identifier}")
+                    return jsonify({
+                        'success': True,
+                        'has_manual_payment': True,
+                        'user_id': user['user_id'],
+                        'email': user.get('email'),
+                        'kcse_index': user.get('kcse_index'),
+                        'payment_receipt': user.get('payment_receipt')
+                    })
+                else:
+                    print(f"⚠️ Manual payment expired or used for {identifier} ({days_active} days)")
+                    # Mark as expired if older than 30 days
+                    if days_active > 30:
+                        users_collection.update_one(
+                            {'user_id': user['user_id']},
+                            {'$set': {'manual_activation': False, 'manual_expired': True}}
+                        )
+        
+        return jsonify({
+            'success': True,
+            'has_manual_payment': False
+        })
+        
+    except Exception as e:
+        print(f"❌ Check manual payment error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 if __name__ == '__main__':

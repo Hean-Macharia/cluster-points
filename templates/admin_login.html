@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - KCSE Calculator</title>
+    <style>
+        :root {
+            --kuccps-red: #C62828;
+            --kuccps-yellow: #FBC02D;
+            --kuccps-light-grey: #F5F5F5;
+            --kuccps-medium-grey: #9E9E9E;
+            --kuccps-black: #000000;
+            --kuccps-white: #FFFFFF;
+            --kuccps-blue: #1565C0;
+            --kuccps-green: #2E7D32;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--kuccps-red) 0%, #B71C1C 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: var(--kuccps-white);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--kuccps-yellow), var(--kuccps-red), var(--kuccps-yellow));
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo i {
+            font-size: 60px;
+            color: var(--kuccps-red);
+            background: var(--kuccps-light-grey);
+            padding: 20px;
+            border-radius: 50%;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: var(--kuccps-black);
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: var(--kuccps-medium-grey);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--kuccps-black);
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--kuccps-medium-grey);
+            font-size: 18px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px 14px 14px 45px;
+            border: 2px solid var(--kuccps-light-grey);
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: var(--kuccps-light-grey);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--kuccps-red);
+            background: var(--kuccps-white);
+            box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
+        }
+        
+        input::placeholder {
+            color: var(--kuccps-medium-grey);
+            font-size: 14px;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--kuccps-medium-grey);
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.3s;
+        }
+        
+        .password-toggle:hover {
+            color: var(--kuccps-red);
+        }
+        
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--kuccps-red) 0%, #B71C1C 100%);
+            color: var(--kuccps-white);
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(198, 40, 40, 0.4);
+        }
+        
+        button i {
+            font-size: 18px;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: var(--kuccps-red);
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            text-align: center;
+            border-left: 4px solid var(--kuccps-red);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .error i {
+            font-size: 20px;
+        }
+        
+        .back-link {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--kuccps-light-grey);
+        }
+        
+        .back-link a {
+            color: var(--kuccps-medium-grey);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .back-link a:hover {
+            color: var(--kuccps-red);
+        }
+        
+        .footer-note {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--kuccps-medium-grey);
+        }
+        
+        .footer-note strong {
+            color: var(--kuccps-red);
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .shake {
+            animation: shake 0.6s ease-in-out;
+        }
+    </style>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <i class="fas fa-calculator"></i>
+        </div>
+        
+        <h1>Admin Login</h1>
+        <div class="subtitle">KCSE Cluster Points Calculator</div>
+        
+        {% if error %}
+        <div class="error" id="errorMessage">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="/admin/login" id="loginForm">
+            <div class="form-group">
+                <label for="username">
+                    <i class="fas fa-user"></i> Username
+                </label>
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" name="username" 
+                           placeholder="Enter your username" required autofocus>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" name="password" 
+                           placeholder="Enter your password" required>
+                    <i class="fas fa-eye password-toggle" id="togglePassword" onclick="togglePassword()"></i>
+                </div>
+            </div>
+            
+            <button type="submit" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i>
+                Login to Dashboard
+            </button>
+        </form>
+        
+        <div class="back-link">
+            <a href="/">
+                <i class="fas fa-arrow-left"></i>
+                Back to Calculator
+            </a>
+        </div>
+        
+        <div class="footer-note">
+            <p>Default credentials: <strong>admin</strong> / <strong>admin123</strong></p>
+            <p style="margin-top: 5px;">
+                <i class="fas fa-shield-alt" style="color: var(--kuccps-green);"></i>
+                Secure Admin Access
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('togglePassword');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Form submission with loading state
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!username || !password) {
+                e.preventDefault();
+                showError('Please enter both username and password');
+                return;
+            }
+            
+            // Show loading state
+            const loginBtn = document.getElementById('loginBtn');
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            loginBtn.disabled = true;
+        });
+
+        // Show error message
+        function showError(message) {
+            // Remove any existing error
+            const existingError = document.querySelector('.error');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Create new error
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                ${message}
+            `;
+            
+            // Insert at top of form
+            const form = document.getElementById('loginForm');
+            form.parentNode.insertBefore(errorDiv, form);
+            
+            // Shake animation
+            document.querySelector('.login-container').classList.add('shake');
+            setTimeout(() => {
+                document.querySelector('.login-container').classList.remove('shake');
+            }, 600);
+        }
+
+        // Auto-hide error message after 5 seconds (if exists)
+        document.addEventListener('DOMContentLoaded', function() {
+            const errorMsg = document.getElementById('errorMessage');
+            if (errorMsg) {
+                setTimeout(() => {
+                    if (errorMsg.parentNode) {
+                        errorMsg.style.transition = 'opacity 0.5s';
+                        errorMsg.style.opacity = '0';
+                        setTimeout(() => {
+                            if (errorMsg.parentNode) {
+                                errorMsg.remove();
+                            }
+                        }, 500);
+                    }
+                }, 5000);
+            }
+        });
+
+        // Add input validation indicators
+        document.getElementById('username').addEventListener('input', function() {
+            validateField(this);
+        });
+
+        document.getElementById('password').addEventListener('input', function() {
+            validateField(this);
+        });
+
+        function validateField(field) {
+            if (field.value.trim().length > 0) {
+                field.style.borderColor = 'var(--kuccps-green)';
+                field.parentElement.querySelector('i:first-child').style.color = 'var(--kuccps-green)';
+            } else {
+                field.style.borderColor = 'var(--kuccps-light-grey)';
+                field.parentElement.querySelector('i:first-child').style.color = 'var(--kuccps-medium-grey)';
+            }
+        }
+
+        // Prevent form resubmission on page refresh
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
+    </script>
+</body>
+</html>
