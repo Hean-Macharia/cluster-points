@@ -1115,20 +1115,11 @@ def register():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-@app.route('/test-callback', methods=['GET', 'POST'])
+@app.route("/test-callback", methods=["GET"])
 def test_callback():
-    """Test endpoint to verify callback connectivity"""
-    if request.method == 'POST':
-        print(f"Test callback received at {datetime.now()}")
-        print(f"Data: {request.get_json()}")
-        return jsonify({'status': 'ok', 'received': True})
-    else:
-        return jsonify({
-            'status': 'ok',
-            'message': 'Callback endpoint is reachable',
-            'time': datetime.now().isoformat(),
-            'method': 'GET'
-        })
+    return {"message": "Test callback endpoint is working!"}, 200
+
+
 @app.route('/check_payment/<checkout_request_id>')
 def check_payment(checkout_request_id):
     """Check payment status"""
@@ -1189,68 +1180,179 @@ def check_payment(checkout_request_id):
 
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
-    """M-Pesa payment callback endpoint"""
+    """M-Pesa payment callback endpoint - Fixed for malformed JSON"""
     try:
-        data = request.get_json()
-        print(f"📞 Callback received:")
-        print(json.dumps(data, indent=2))
+        # Log everything
+        print("=" * 80)
+        print(f"📞 M-PESA CALLBACK RECEIVED at {datetime.now().isoformat()}")
+        print(f"Headers: {dict(request.headers)}")
         
-        if not data or 'Body' not in data or 'stkCallback' not in data['Body']:
-            print("❌ Invalid callback data structure")
-            return jsonify({'ResultCode': 1, 'ResultDesc': 'Invalid callback data'})
+        # Get raw data
+        raw_data = request.get_data(as_text=True)
+        print(f"Raw data length: {len(raw_data)}")
+        print(f"Raw data (first 500 chars): {raw_data[:500]}")
         
-        callback_data = data['Body']['stkCallback']
-        checkout_request_id = callback_data.get('CheckoutRequestID')
-        result_code = callback_data.get('ResultCode')
-        result_desc = callback_data.get('ResultDesc')
+        # Try multiple ways to parse the data
+        data = None
         
-        print(f"📋 Callback details:")
+        # Method 1: Try to parse as JSON normally
+        try:
+            data = request.get_json(force=True, silent=True)
+            if data:
+                print("✅ Parsed JSON successfully (method 1)")
+        except Exception as e:
+            print(f"⚠️ Method 1 failed: {e}")
+        
+        # Method 2: If that fails, try to clean the raw data
+        if not data and raw_data:
+            try:
+                # Remove any trailing garbage
+                cleaned_data = raw_data.strip()
+                # Find the first valid JSON object
+                import re
+                json_match = re.search(r'\{.*\}', cleaned_data, re.DOTALL)
+                if json_match:
+                    cleaned_data = json_match.group()
+                    data = json.loads(cleaned_data)
+                    print("✅ Parsed JSON successfully after cleaning (method 2)")
+            except Exception as e:
+                print(f"⚠️ Method 2 failed: {e}")
+        
+        # Method 3: Try to parse as query string
+        if not data and raw_data:
+            try:
+                from urllib.parse import parse_qs
+                parsed_qs = parse_qs(raw_data)
+                if parsed_qs:
+                    # Convert to dict
+                    data = {k: v[0] if len(v) == 1 else v for k, v in parsed_qs.items()}
+                    print("✅ Parsed as query string (method 3)")
+            except Exception as e:
+                print(f"⚠️ Method 3 failed: {e}")
+        
+        # If still no data, save raw for debugging
+        if not data:
+            print("❌ Could not parse callback data")
+            if db:
+                db.unparsable_callbacks.insert_one({
+                    'raw_data': raw_data,
+                    'headers': dict(request.headers),
+                    'received_at': datetime.now()
+                })
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+        
+        print(f"Parsed data: {json.dumps(data, indent=2)[:1000]}")
+        
+        # Handle different callback formats
+        callback_data = None
+        
+        # Check various possible structures
+        if 'Body' in data and 'stkCallback' in data['Body']:
+            callback_data = data['Body']['stkCallback']
+        elif 'stkCallback' in data:
+            callback_data = data['stkCallback']
+        elif 'Result' in data and 'Result' in data['Result']:
+            # Alternative format
+            callback_data = data['Result']
+        
+        if not callback_data:
+            print("❌ Could not extract stkCallback from data")
+            print(f"Available keys: {data.keys()}")
+            if db:
+                db.invalid_callback_format.insert_one({
+                    'data': data,
+                    'received_at': datetime.now()
+                })
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+        
+        checkout_request_id = callback_data.get('CheckoutRequestID') or callback_data.get('CheckoutRequestID', '')
+        merchant_request_id = callback_data.get('MerchantRequestID') or callback_data.get('MerchantRequestID', '')
+        result_code = callback_data.get('ResultCode') or callback_data.get('ResultCode', 1)
+        result_desc = callback_data.get('ResultDesc') or callback_data.get('ResultDesc', 'Unknown')
+        
+        print(f"\n📋 Callback Details:")
         print(f"  CheckoutRequestID: {checkout_request_id}")
+        print(f"  MerchantRequestID: {merchant_request_id}")
         print(f"  ResultCode: {result_code}")
         print(f"  ResultDesc: {result_desc}")
         
-        if not checkout_request_id:
-            print("❌ No CheckoutRequestID in callback")
-            return jsonify({'ResultCode': 1, 'ResultDesc': 'Missing CheckoutRequestID'})
-        
         # Find payment record
-        payment_record = payments_collection.find_one({
-            'mpesa_request_id': checkout_request_id
-        })
+        payment_record = None
+        
+        if checkout_request_id:
+            payment_record = payments_collection.find_one({
+                'mpesa_request_id': checkout_request_id
+            })
+            if payment_record:
+                print(f"✅ Found payment by CheckoutRequestID")
+        
+        if not payment_record and merchant_request_id:
+            payment_record = payments_collection.find_one({
+                'merchant_request_id': merchant_request_id
+            })
+            if payment_record:
+                print(f"✅ Found payment by MerchantRequestID")
         
         if not payment_record:
-            print(f"❌ Payment record not found for CheckoutRequestID: {checkout_request_id}")
-            return jsonify({'ResultCode': 1, 'ResultDesc': 'Payment record not found'})
+            print(f"⚠️ Payment record not found")
+            # Store for manual processing
+            if db:
+                db.unmatched_callbacks.insert_one({
+                    'checkout_request_id': checkout_request_id,
+                    'merchant_request_id': merchant_request_id,
+                    'result_code': result_code,
+                    'result_desc': result_desc,
+                    'full_data': data,
+                    'raw_data': raw_data[:1000],
+                    'received_at': datetime.now()
+                })
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+        
+        print(f"✅ Found payment for user: {payment_record.get('user_id')}")
         
         if result_code == 0:
-            # Payment successful
-            callback_metadata = callback_data.get('CallbackMetadata', {}).get('Item', [])
+            # Payment successful - extract metadata
+            metadata = callback_data.get('CallbackMetadata', {})
             
-            # Extract payment details
+            # Handle different metadata formats
+            items = []
+            if isinstance(metadata, dict):
+                items = metadata.get('Item', [])
+            elif isinstance(metadata, list):
+                items = metadata
+            
+            # Convert items to dict
             payment_details = {}
-            for item in callback_metadata:
-                if 'Name' in item and 'Value' in item:
-                    payment_details[item['Name']] = item['Value']
+            for item in items:
+                if isinstance(item, dict):
+                    if 'Name' in item and 'Value' in item:
+                        payment_details[item['Name']] = item['Value']
+                    elif 'key' in item and 'value' in item:
+                        payment_details[item['key']] = item['value']
             
-            payment_update = {
+            print(f"💰 Payment Details: {json.dumps(payment_details, indent=2)}")
+            
+            # Update payment record
+            update_data = {
                 'status': 'completed',
                 'result_code': result_code,
                 'result_desc': result_desc,
-                'mpesa_receipt': payment_details.get('MpesaReceiptNumber', ''),
-                'transaction_date': payment_details.get('TransactionDate', ''),
-                'phone_number': payment_details.get('PhoneNumber', ''),
+                'mpesa_receipt': payment_details.get('MpesaReceiptNumber') or payment_details.get('MpesaReceiptNumber', ''),
+                'transaction_date': str(payment_details.get('TransactionDate', '')),
+                'phone_number': str(payment_details.get('PhoneNumber', '')),
                 'amount': payment_details.get('Amount', PAYMENT_AMOUNT),
+                'callback_received_at': datetime.now(),
                 'updated_at': datetime.now()
             }
             
-            # Update payment record
             payments_collection.update_one(
-                {'mpesa_request_id': checkout_request_id},
-                {'$set': payment_update}
+                {'_id': payment_record['_id']},
+                {'$set': update_data}
             )
+            print(f"✅ Payment record updated")
             
             # Update user status
-            users_collection.update_one(
+            user_update = users_collection.update_one(
                 {'user_id': payment_record['user_id']},
                 {'$set': {
                     'payment_status': 'completed',
@@ -1259,22 +1361,23 @@ def mpesa_callback():
                     'updated_at': datetime.now()
                 }}
             )
+            print(f"✅ User {payment_record['user_id']} updated")
             
-            print(f"✅ Payment completed for user: {payment_record['user_id']}")
-            print(f"   M-Pesa Receipt: {payment_details.get('MpesaReceiptNumber', 'N/A')}")
+            print(f"🎉 Payment completed successfully!")
             
         else:
             # Payment failed
-            payment_update = {
-                'status': 'failed',
-                'result_code': result_code,
-                'result_desc': result_desc,
-                'updated_at': datetime.now()
-            }
+            print(f"❌ Payment failed: {result_desc}")
             
             payments_collection.update_one(
-                {'mpesa_request_id': checkout_request_id},
-                {'$set': payment_update}
+                {'_id': payment_record['_id']},
+                {'$set': {
+                    'status': 'failed',
+                    'result_code': result_code,
+                    'result_desc': result_desc,
+                    'callback_received_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }}
             )
             
             users_collection.update_one(
@@ -1284,19 +1387,25 @@ def mpesa_callback():
                     'updated_at': datetime.now()
                 }}
             )
-            
-            print(f"❌ Payment failed for user: {payment_record['user_id']}")
-            print(f"   Reason: {result_desc}")
         
-        # Always return success to M-Pesa
+        print("=" * 80)
         return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
         
     except Exception as e:
-        print(f"❌ Callback processing error: {str(e)}")
+        print(f"❌ Callback error: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'ResultCode': 1, 'ResultDesc': f'Error: {str(e)}'})
-
+        
+        # Save error for debugging
+        if db:
+            db.callback_errors.insert_one({
+                'error': str(e),
+                'traceback': traceback.format_exc(),
+                'received_at': datetime.now()
+            })
+        
+        # Always return success to M-Pesa
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
 @app.route('/my_results')
 def my_results():
     """Check if user is logged in and paid, and show saved results"""
