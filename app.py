@@ -401,7 +401,286 @@ def initiate_stk_push(phone_number, amount, account_reference, transaction_desc)
         logger.error(f"STK Push error: {str(e)}")
         raise
 
-# ===== MAIN ROUTES =====
+# ===== UNIFIED CALLBACK HANDLER =====
+
+def process_callback_data(raw_data, request_path):
+    """Unified callback processing logic"""
+    try:
+        print("=" * 80)
+        print(f"📞 M-PESA CALLBACK RECEIVED at {datetime.now().isoformat()}")
+        print(f"Path: {request_path}")
+        print(f"Raw data length: {len(raw_data)}")
+        print(f"Raw data: {raw_data[:500]}")
+        
+        callback_id = str(uuid.uuid4())
+        if db is not None:
+            db.raw_callbacks.insert_one({
+                'callback_id': callback_id,
+                'raw_data': raw_data,
+                'headers': dict(request.headers) if hasattr(request, 'headers') else {},
+                'path': request_path,
+                'received_at': datetime.now(),
+                'processed': False
+            })
+            print(f"✅ Raw callback saved with ID: {callback_id}")
+        
+        # Parse JSON with multiple methods
+        data = None
+        
+        try:
+            data = json.loads(raw_data) if raw_data else None
+            if data:
+                print("✅ Parsed JSON successfully (method 1)")
+        except:
+            pass
+        
+        if not data:
+            try:
+                import re
+                json_match = re.search(r'\{.*\}', raw_data, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group())
+                    print("✅ Parsed JSON after cleaning (method 2)")
+            except:
+                pass
+        
+        if not data:
+            print("❌ Could not parse callback data")
+            return None
+        
+        # Extract callback data
+        callback_data = None
+        if 'Body' in data and 'stkCallback' in data['Body']:
+            callback_data = data['Body']['stkCallback']
+        elif 'stkCallback' in data:
+            callback_data = data['stkCallback']
+        
+        if not callback_data:
+            print("❌ Could not extract stkCallback from data")
+            return None
+        
+        checkout_id = callback_data.get('CheckoutRequestID')
+        merchant_id = callback_data.get('MerchantRequestID')
+        result_code = callback_data.get('ResultCode')
+        result_desc = callback_data.get('ResultDesc')
+        
+        print(f"\n📋 Callback Details:")
+        print(f"  CheckoutRequestID: {checkout_id}")
+        print(f"  MerchantRequestID: {merchant_id}")
+        print(f"  ResultCode: {result_code}")
+        print(f"  ResultDesc: {result_desc}")
+        
+        if not checkout_id and not merchant_id:
+            return None
+        
+        # Find payment record
+        payment_record = None
+        
+        if checkout_id:
+            payment_record = payments_collection.find_one({
+                '$or': [
+                    {'mpesa_request_id': checkout_id},
+                    {'checkout_request_id': checkout_id}
+                ]
+            })
+            if payment_record:
+                print(f"✅ Found payment by CheckoutRequestID: {checkout_id}")
+        
+        if not payment_record and merchant_id:
+            payment_record = payments_collection.find_one({
+                'merchant_request_id': merchant_id
+            })
+            if payment_record:
+                print(f"✅ Found payment by MerchantRequestID: {merchant_id}")
+        
+        if not payment_record and callback_data.get('CallbackMetadata'):
+            metadata = callback_data.get('CallbackMetadata', {})
+            items = metadata.get('Item', [])
+            for item in items:
+                if item.get('Name') == 'PhoneNumber':
+                    phone = item.get('Value', '')
+                    payment_record = payments_collection.find_one({
+                        'phone_number': {'$regex': phone[-9:]},
+                        'status': 'pending'
+                    }, sort=[('created_at', -1)])
+                    if payment_record:
+                        print(f"✅ Found payment by PhoneNumber: {phone}")
+                        break
+        
+        if not payment_record:
+            print(f"⚠️ Payment record not found for {checkout_id or merchant_id}")
+            if db is not None:
+                db.unmatched_callbacks.insert_one({
+                    'callback_id': callback_id,
+                    'checkout_request_id': checkout_id,
+                    'merchant_request_id': merchant_id,
+                    'result_code': result_code,
+                    'result_desc': result_desc,
+                    'full_data': data,
+                    'raw_data': raw_data[:1000],
+                    'received_at': datetime.now(),
+                    'status': 'unmatched'
+                })
+            return None
+        
+        print(f"✅ Found payment for user: {payment_record['user_id']}")
+        
+        if result_code == 0:
+            print("💰 Processing successful payment...")
+            
+            metadata = callback_data.get('CallbackMetadata', {})
+            items = metadata.get('Item', []) if isinstance(metadata, dict) else []
+            
+            payment_details = {}
+            for item in items:
+                if isinstance(item, dict):
+                    if 'Name' in item and 'Value' in item:
+                        payment_details[item['Name']] = item['Value']
+            
+            receipt = payment_details.get('MpesaReceiptNumber', '')
+            transaction_date = str(payment_details.get('TransactionDate', ''))
+            phone = str(payment_details.get('PhoneNumber', ''))
+            amount = payment_details.get('Amount', PAYMENT_AMOUNT)
+            
+            print(f"💰 Payment Details:")
+            print(f"  Receipt: {receipt}")
+            print(f"  Date: {transaction_date}")
+            print(f"  Phone: {phone}")
+            print(f"  Amount: {amount}")
+            
+            payments_collection.update_one(
+                {'_id': payment_record['_id']},
+                {'$set': {
+                    'status': 'completed',
+                    'result_code': result_code,
+                    'result_desc': result_desc,
+                    'mpesa_receipt': receipt,
+                    'transaction_date': transaction_date,
+                    'phone_number': phone or payment_record.get('phone_number'),
+                    'amount': amount,
+                    'callback_received_at': datetime.now(),
+                    'callback_id': callback_id,
+                    'callback_path': request_path,
+                    'updated_at': datetime.now()
+                }}
+            )
+            print(f"✅ Payment record updated")
+            
+            users_collection.update_one(
+                {'user_id': payment_record['user_id']},
+                {'$set': {
+                    'payment_status': 'completed',
+                    'payment_date': datetime.now(),
+                    'payment_receipt': receipt,
+                    'mpesa_phone': phone,
+                    'updated_at': datetime.now()
+                }}
+            )
+            print(f"✅ User {payment_record['user_id']} updated")
+            
+            if db is not None:
+                db.raw_callbacks.update_one(
+                    {'callback_id': callback_id},
+                    {'$set': {
+                        'processed': True,
+                        'processed_at': datetime.now(),
+                        'payment_id': str(payment_record['_id']),
+                        'user_id': payment_record['user_id'],
+                        'receipt': receipt
+                    }}
+                )
+            
+            print(f"🎉 PAYMENT COMPLETED SUCCESSFULLY!")
+            print(f"   User: {payment_record['user_id']}")
+            print(f"   Receipt: {receipt}")
+            return payment_record
+            
+        else:
+            print(f"❌ Payment failed: {result_desc}")
+            
+            payments_collection.update_one(
+                {'_id': payment_record['_id']},
+                {'$set': {
+                    'status': 'failed',
+                    'result_code': result_code,
+                    'result_desc': result_desc,
+                    'callback_received_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }}
+            )
+            
+            if db is not None:
+                db.raw_callbacks.update_one(
+                    {'callback_id': callback_id},
+                    {'$set': {
+                        'processed': True,
+                        'processed_at': datetime.now(),
+                        'status': 'failed',
+                        'result_desc': result_desc
+                    }}
+                )
+            return None
+            
+    except Exception as e:
+        print(f"❌ Callback processing error: {str(e)}")
+        traceback.print_exc()
+        return None
+
+# ===== CALLBACK ROUTES =====
+
+@app.route('/mpesa/callback', methods=['POST'])
+def mpesa_callback_main():
+    """Main callback endpoint matching working apps"""
+    try:
+        raw_data = request.get_data(as_text=True)
+        result = process_callback_data(raw_data, '/mpesa/callback')
+        if result:
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+    except Exception as e:
+        print(f"❌ Error in /mpesa/callback: {e}")
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+
+@app.route('/callback', methods=['POST'])
+def callback_original():
+    """Original callback endpoint for backward compatibility"""
+    try:
+        raw_data = request.get_data(as_text=True)
+        result = process_callback_data(raw_data, '/callback')
+        if result:
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+    except Exception as e:
+        print(f"❌ Error in /callback: {e}")
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+
+@app.route('/mpesa-callback', methods=['POST'])
+def mpesa_callback_hyphen():
+    """Alternative callback endpoint with hyphen"""
+    try:
+        raw_data = request.get_data(as_text=True)
+        result = process_callback_data(raw_data, '/mpesa-callback')
+        if result:
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+    except Exception as e:
+        print(f"❌ Error in /mpesa-callback: {e}")
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+
+@app.route('/lnm/result', methods=['POST'])
+def lipa_na_mpesa_callback():
+    """Lipa Na M-Pesa callback endpoint"""
+    try:
+        raw_data = request.get_data(as_text=True)
+        result = process_callback_data(raw_data, '/lnm/result')
+        if result:
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+    except Exception as e:
+        print(f"❌ Error in /lnm/result: {e}")
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+
+# ===== OTHER ROUTES =====
 
 @app.route('/')
 def index():
@@ -594,245 +873,45 @@ def register():
         logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/callback', methods=['POST'])
-def mpesa_callback():
+@app.route('/check-payment-status/<checkout_id>')
+def check_payment_status(checkout_id):
+    """Check if payment was actually made via M-Pesa API"""
     try:
-        print("=" * 80)
-        print(f"📞 M-PESA CALLBACK RECEIVED at {datetime.now().isoformat()}")
+        access_token = generate_access_token()
         
-        raw_data = request.get_data(as_text=True)
-        print(f"Raw data length: {len(raw_data)}")
-        print(f"Raw data: {raw_data[:500]}")
+        url = 'https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query'
         
-        callback_id = str(uuid.uuid4())
-        if db is not None:
-            db.raw_callbacks.insert_one({
-                'callback_id': callback_id,
-                'raw_data': raw_data,
-                'headers': dict(request.headers),
-                'received_at': datetime.now(),
-                'processed': False
-            })
-            print(f"✅ Raw callback saved with ID: {callback_id}")
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        password_str = f"{MPESA_CONFIG['business_shortcode']}{MPESA_CONFIG['passkey']}{timestamp}"
+        password = base64.b64encode(password_str.encode()).decode()
         
-        data = None
+        payload = {
+            "BusinessShortCode": MPESA_CONFIG['business_shortcode'],
+            "Password": password,
+            "Timestamp": timestamp,
+            "CheckoutRequestID": checkout_id
+        }
         
-        try:
-            data = request.get_json(force=True, silent=True)
-            if data:
-                print("✅ Parsed JSON successfully (method 1)")
-        except Exception as e:
-            print(f"⚠️ Method 1 failed: {e}")
+        headers = {'Authorization': f'Bearer {access_token}'}
         
-        if not data and raw_data:
-            try:
-                import re
-                json_match = re.search(r'\{.*\}', raw_data, re.DOTALL)
-                if json_match:
-                    cleaned_data = json_match.group()
-                    data = json.loads(cleaned_data)
-                    print("✅ Parsed JSON after cleaning (method 2)")
-            except Exception as e:
-                print(f"⚠️ Method 2 failed: {e}")
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        result = response.json()
         
-        if not data and raw_data:
-            try:
-                cleaned_data = raw_data.strip()
-                last_brace = cleaned_data.rfind('}')
-                if last_brace > 0:
-                    cleaned_data = cleaned_data[:last_brace + 1]
-                    data = json.loads(cleaned_data)
-                    print("✅ Parsed JSON after trimming (method 3)")
-            except Exception as e:
-                print(f"⚠️ Method 3 failed: {e}")
-        
-        if not data:
-            print("❌ Could not parse callback data")
-            if db is not None:
-                db.failed_callbacks.insert_one({
-                    'callback_id': callback_id,
-                    'raw_data': raw_data,
-                    'error': 'JSON parse failed',
-                    'received_at': datetime.now()
-                })
-            return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
-        
-        callback_data = None
-        if 'Body' in data and 'stkCallback' in data['Body']:
-            callback_data = data['Body']['stkCallback']
-        elif 'stkCallback' in data:
-            callback_data = data['stkCallback']
-        
-        if not callback_data:
-            print("❌ Could not extract stkCallback from data")
-            return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
-        
-        checkout_id = callback_data.get('CheckoutRequestID')
-        merchant_id = callback_data.get('MerchantRequestID')
-        result_code = callback_data.get('ResultCode')
-        result_desc = callback_data.get('ResultDesc')
-        
-        print(f"\n📋 Callback Details:")
-        print(f"  CheckoutRequestID: {checkout_id}")
-        print(f"  MerchantRequestID: {merchant_id}")
-        print(f"  ResultCode: {result_code}")
-        print(f"  ResultDesc: {result_desc}")
-        
-        if not checkout_id and not merchant_id:
-            return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
-        
-        payment_record = None
-        
-        if checkout_id:
-            payment_record = payments_collection.find_one({'mpesa_request_id': checkout_id})
-            if payment_record:
-                print(f"✅ Found payment by CheckoutRequestID: {checkout_id}")
-        
-        if not payment_record and merchant_id:
-            payment_record = payments_collection.find_one({'merchant_request_id': merchant_id})
-            if payment_record:
-                print(f"✅ Found payment by MerchantRequestID: {merchant_id}")
-        
-        if not payment_record and callback_data.get('CallbackMetadata'):
-            metadata = callback_data.get('CallbackMetadata', {})
-            items = metadata.get('Item', [])
-            for item in items:
-                if item.get('Name') == 'PhoneNumber':
-                    phone = item.get('Value', '')
-                    payment_record = payments_collection.find_one({
-                        'phone_number': {'$regex': phone[-9:]},
-                        'status': 'pending'
-                    }, sort=[('created_at', -1)])
-                    if payment_record:
-                        print(f"✅ Found payment by PhoneNumber: {phone}")
-                        break
-        
-        if not payment_record:
-            print(f"⚠️ Payment record not found")
-            if db is not None:
-                db.unmatched_callbacks.insert_one({
-                    'callback_id': callback_id,
-                    'checkout_request_id': checkout_id,
-                    'merchant_request_id': merchant_id,
-                    'result_code': result_code,
-                    'result_desc': result_desc,
-                    'full_data': data,
-                    'raw_data': raw_data[:1000],
-                    'received_at': datetime.now(),
-                    'status': 'unmatched'
-                })
-            return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
-        
-        print(f"✅ Found payment for user: {payment_record['user_id']}")
-        
-        if result_code == 0:
-            print("💰 Processing successful payment...")
-            
-            metadata = callback_data.get('CallbackMetadata', {})
-            items = metadata.get('Item', []) if isinstance(metadata, dict) else []
-            
-            payment_details = {}
-            for item in items:
-                if isinstance(item, dict):
-                    if 'Name' in item and 'Value' in item:
-                        payment_details[item['Name']] = item['Value']
-            
-            receipt = payment_details.get('MpesaReceiptNumber', '')
-            transaction_date = str(payment_details.get('TransactionDate', ''))
-            phone = str(payment_details.get('PhoneNumber', ''))
-            amount = payment_details.get('Amount', PAYMENT_AMOUNT)
-            
-            print(f"💰 Payment Details:")
-            print(f"  Receipt: {receipt}")
-            print(f"  Date: {transaction_date}")
-            print(f"  Phone: {phone}")
-            print(f"  Amount: {amount}")
-            
+        if result.get('ResultCode') == 0:
             payments_collection.update_one(
-                {'_id': payment_record['_id']},
-                {'$set': {
-                    'status': 'completed',
-                    'result_code': result_code,
-                    'result_desc': result_desc,
-                    'mpesa_receipt': receipt,
-                    'transaction_date': transaction_date,
-                    'phone_number': phone or payment_record.get('phone_number'),
-                    'amount': amount,
-                    'callback_received_at': datetime.now(),
-                    'callback_id': callback_id,
-                    'updated_at': datetime.now()
-                }}
+                {'mpesa_request_id': checkout_id},
+                {'$set': {'status': 'completed', 'mpesa_response': result}}
             )
-            print(f"✅ Payment record updated")
-            
             users_collection.update_one(
-                {'user_id': payment_record['user_id']},
-                {'$set': {
-                    'payment_status': 'completed',
-                    'payment_date': datetime.now(),
-                    'payment_receipt': receipt,
-                    'mpesa_phone': phone,
-                    'updated_at': datetime.now()
-                }}
+                {'checkout_request_id': checkout_id},
+                {'$set': {'payment_status': 'completed'}}
             )
-            print(f"✅ User {payment_record['user_id']} updated")
-            
-            if db is not None:
-                db.raw_callbacks.update_one(
-                    {'callback_id': callback_id},
-                    {'$set': {
-                        'processed': True,
-                        'processed_at': datetime.now(),
-                        'payment_id': str(payment_record['_id']),
-                        'user_id': payment_record['user_id'],
-                        'receipt': receipt
-                    }}
-                )
-            
-            print(f"🎉 PAYMENT COMPLETED SUCCESSFULLY!")
-            print(f"   User: {payment_record['user_id']}")
-            print(f"   Receipt: {receipt}")
-            
-        else:
-            print(f"❌ Payment failed: {result_desc}")
-            
-            payments_collection.update_one(
-                {'_id': payment_record['_id']},
-                {'$set': {
-                    'status': 'failed',
-                    'result_code': result_code,
-                    'result_desc': result_desc,
-                    'callback_received_at': datetime.now(),
-                    'updated_at': datetime.now()
-                }}
-            )
-            
-            if db is not None:
-                db.raw_callbacks.update_one(
-                    {'callback_id': callback_id},
-                    {'$set': {
-                        'processed': True,
-                        'processed_at': datetime.now(),
-                        'status': 'failed',
-                        'result_desc': result_desc
-                    }}
-                )
+            return jsonify({'status': 'completed'})
         
-        print("=" * 80)
-        return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        return jsonify({'status': 'pending', 'message': result.get('ResultDesc')})
         
     except Exception as e:
-        print(f"❌ Callback error: {str(e)}")
-        traceback.print_exc()
-        
-        if db is not None:
-            db.callback_errors.insert_one({
-                'error': str(e),
-                'traceback': traceback.format_exc(),
-                'received_at': datetime.now()
-            })
-        
-        return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
 @app.route('/check_payment/<checkout_request_id>')
 def check_payment(checkout_request_id):
