@@ -24,6 +24,7 @@ import tempfile
 import time
 import logging
 import traceback
+import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +41,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # MongoDB Configuration
+db = None  # Initialize db variable
 try:
     mongo_client = MongoClient(os.getenv('MONGODB_URI'), serverSelectionTimeoutMS=5000)
     mongo_client.server_info()  # Test connection
@@ -84,80 +86,81 @@ except Exception as e:
     
     db = None
     users_collection = payments_collection = results_collection = pdfs_collection = DummyCollection()
-# After MongoDB initialization and before routes
-import threading
-import time
 
+# Background thread for retrying unmatched callbacks
 def process_unmatched_callbacks():
     """Background thread to retry processing unmatched callbacks"""
     while True:
         try:
             time.sleep(60)  # Check every minute
             
-            if not db:
-                continue
-            
-            # Find unmatched callbacks from last 24 hours
-            unmatched = db.unmatched_callbacks.find({
-                'status': 'unmatched',
-                'received_at': {'$gt': datetime.now() - timedelta(hours=24)}
-            })
-            
-            for callback in unmatched:
-                print(f"🔄 Retrying unmatched callback: {callback.get('callback_id')}")
-                
-                # Try to find payment again
-                checkout_id = callback.get('checkout_request_id')
-                payment = None
-                
-                if checkout_id:
-                    payment = payments_collection.find_one({
-                        'mpesa_request_id': checkout_id
+            # Check if db is not None
+            if db is not None:
+                # Check if unmatched_callbacks collection exists
+                try:
+                    unmatched = db.unmatched_callbacks.find({
+                        'status': 'unmatched',
+                        'received_at': {'$gt': datetime.now() - timedelta(hours=24)}
                     })
-                
-                if payment:
-                    # Found payment - process it
-                    result_code = callback.get('result_code', 0)
-                    result_desc = callback.get('result_desc', 'Success')
                     
-                    if result_code == 0:
-                        payments_collection.update_one(
-                            {'_id': payment['_id']},
-                            {'$set': {
-                                'status': 'completed',
-                                'mpesa_receipt': 'RETRY_' + str(int(time.time())),
-                                'result_desc': result_desc,
-                                'callback_received_at': datetime.now()
-                            }}
-                        )
+                    for callback in unmatched:
+                        print(f"🔄 Retrying unmatched callback: {callback.get('callback_id')}")
                         
-                        users_collection.update_one(
-                            {'user_id': payment['user_id']},
-                            {'$set': {
-                                'payment_status': 'completed',
-                                'payment_date': datetime.now()
-                            }}
-                        )
+                        # Try to find payment again
+                        checkout_id = callback.get('checkout_request_id')
+                        payment = None
                         
-                        print(f"✅ Successfully processed unmatched callback for {payment['user_id']}")
+                        if checkout_id:
+                            payment = payments_collection.find_one({
+                                'mpesa_request_id': checkout_id
+                            })
                         
-                        # Mark as processed
-                        db.unmatched_callbacks.update_one(
-                            {'_id': callback['_id']},
-                            {'$set': {
-                                'status': 'processed',
-                                'processed_at': datetime.now()
-                            }}
-                        )
+                        if payment:
+                            # Found payment - process it
+                            result_code = callback.get('result_code', 0)
+                            result_desc = callback.get('result_desc', 'Success')
+                            
+                            if result_code == 0:
+                                payments_collection.update_one(
+                                    {'_id': payment['_id']},
+                                    {'$set': {
+                                        'status': 'completed',
+                                        'mpesa_receipt': 'RETRY_' + str(int(time.time())),
+                                        'result_desc': result_desc,
+                                        'callback_received_at': datetime.now()
+                                    }}
+                                )
+                                
+                                users_collection.update_one(
+                                    {'user_id': payment['user_id']},
+                                    {'$set': {
+                                        'payment_status': 'completed',
+                                        'payment_date': datetime.now()
+                                    }}
+                                )
+                                
+                                print(f"✅ Successfully processed unmatched callback for {payment['user_id']}")
+                                
+                                # Mark as processed
+                                db.unmatched_callbacks.update_one(
+                                    {'_id': callback['_id']},
+                                    {'$set': {
+                                        'status': 'processed',
+                                        'processed_at': datetime.now()
+                                    }}
+                                )
+                except Exception as e:
+                    print(f"Error processing unmatched callbacks: {e}")
                         
         except Exception as e:
             print(f"Error in callback retry thread: {e}")
 
-# Start background thread (add this after MongoDB connection)
-if db:
+# Start background thread if MongoDB is connected
+if db is not None:
     retry_thread = threading.Thread(target=process_unmatched_callbacks, daemon=True)
     retry_thread.start()
     print("✅ Callback retry thread started")
+
 # M-Pesa Configuration
 MPESA_CONFIG = {
     'consumer_key': os.getenv('MPESA_CONSUMER_KEY'),
@@ -195,7 +198,7 @@ SUBJECT_GROUPS = {
     ]
 }
 
-# Subject name mapping for normalization (form fields to internal names)
+# Subject name mapping for normalization
 SUBJECT_NAME_MAP = {
     'mathematics': 'mathematics',
     'english': 'english',
@@ -226,7 +229,6 @@ SUBJECT_NAME_MAP = {
     'aviation': 'aviation',
     'drawing_design': 'drawing_design',
     'power_mechanics': 'power_mechanics',
-    # Aliases
     'mathematics_a': 'mathematics',
     'mathematics_b': 'mathematics',
     'home_science': 'homescience',
@@ -237,8 +239,7 @@ SUBJECT_NAME_MAP = {
     'electricity_electronics': 'electronics'
 }
 
-# Cluster definitions (keeping all 20 clusters from your original code)
-# [Keep all your CLUSTERS definitions exactly as they were]
+# Cluster definitions
 CLUSTERS = {
     1: {'name': 'Cluster 1', 'description': 'Law', 'requirements': []},
     2: {'name': 'Cluster 2', 'description': 'Business and Hospitality Related', 'requirements': []},
@@ -265,11 +266,9 @@ CLUSTERS = {
 # ===== HELPER FUNCTIONS =====
 
 def normalize_subject_name(subject):
-    """Normalize subject names to match form field names"""
     return SUBJECT_NAME_MAP.get(subject.lower(), subject.lower())
 
 def get_subject_group(subject):
-    """Determine which group a subject belongs to"""
     normalized = normalize_subject_name(subject)
     for group, subjects in SUBJECT_GROUPS.items():
         if normalized in subjects:
@@ -277,11 +276,9 @@ def get_subject_group(subject):
     return None
 
 def get_group_subjects(group_name):
-    """Get all subjects in a group"""
     return SUBJECT_GROUPS.get(group_name, [])
 
 def get_best_subjects_by_group(grades, group_name, count=1, exclude_subjects=None):
-    """Get best N subjects from a specific group, excluding already used subjects"""
     if exclude_subjects is None:
         exclude_subjects = []
     
@@ -295,62 +292,41 @@ def get_best_subjects_by_group(grades, group_name, count=1, exclude_subjects=Non
             points = GRADE_POINTS.get(grades[subject], 0)
             subject_points.append((subject, points, grades[subject]))
     
-    # Sort by points (descending)
     subject_points.sort(key=lambda x: x[1], reverse=True)
-    
-    # Return top N subjects
     return subject_points[:count]
 
 def get_aggregate_points(grades):
-    """
-    Calculate Aggregate Points (AGP) - sum of best 7 subjects ONLY
-    """
     all_points = []
-    
-    # Collect all subjects with valid grades
     for subject, grade in grades.items():
         if grade:
             points = GRADE_POINTS.get(grade, 0)
             all_points.append((subject, points))
     
-    # Sort by points (descending)
     all_points.sort(key=lambda x: x[1], reverse=True)
-    
-    # Take top 7 only
     top_7 = all_points[:7]
-    
-    # Calculate sum of points for top 7 subjects
     total_points = sum(p for _, p in top_7)
-    
     return total_points, top_7
 
 def calculate_cluster_points(grades, cluster_id, debug=False):
-    """Calculate cluster points using the KCSE formula"""
-    # Simplified for now - you can add your full implementation
-    # Generate sample points based on grades
-    total_points = 0
     valid_grades = [g for g in grades.values() if g]
     if valid_grades:
         avg_grade = sum(GRADE_POINTS.get(g, 0) for g in valid_grades) / len(valid_grades)
-        cluster_points = avg_grade * 4  # Rough approximation
+        cluster_points = avg_grade * 4
         cluster_points = max(0.000, min(48.000, cluster_points - 3.0))
         return round(cluster_points, 3), [], []
     return 0.000, [], []
 
 def validate_kcse_index(kcse_index):
-    """Validate KCSE index format: 12345678912/2024"""
     pattern = r'^\d{11}/\d{4}$'
     if re.match(pattern, kcse_index):
         index_part, year_part = kcse_index.split('/')
         year = int(year_part)
         current_year = datetime.now().year
-        
         if 1980 <= year <= current_year + 1:
             return True, "Valid KCSE index"
     return False, "Invalid KCSE index format. Use: 12345678912/2024"
 
 def validate_phone_number(phone):
-    """Validate Kenyan phone number"""
     phone = str(phone).strip().replace(' ', '').replace('-', '').replace('+', '')
     
     if phone.startswith('254') and len(phone) == 12:
@@ -364,7 +340,6 @@ def validate_phone_number(phone):
     return False, "Invalid phone number. Use format: 0712345678 or 254712345678"
 
 def generate_access_token():
-    """Generate M-Pesa access token"""
     try:
         if MPESA_CONFIG['environment'] == 'sandbox':
             url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
@@ -387,7 +362,6 @@ def generate_access_token():
         raise
 
 def initiate_stk_push(phone_number, amount, account_reference, transaction_desc):
-    """Initiate STK Push payment"""
     try:
         access_token = generate_access_token()
         
@@ -396,10 +370,7 @@ def initiate_stk_push(phone_number, amount, account_reference, transaction_desc)
         else:
             url = 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
         
-        # Generate timestamp
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        
-        # Generate password
         password_str = f"{MPESA_CONFIG['business_shortcode']}{MPESA_CONFIG['passkey']}{timestamp}"
         password = base64.b64encode(password_str.encode()).decode()
         
@@ -424,7 +395,6 @@ def initiate_stk_push(phone_number, amount, account_reference, transaction_desc)
         
         response = requests.post(url, json=payload, headers=headers, timeout=30)
         response_data = response.json()
-        
         return response_data
         
     except Exception as e:
@@ -453,7 +423,6 @@ def health():
 
 @app.route('/test-callback', methods=['GET', 'POST'])
 def test_callback():
-    """Test endpoint for callback debugging"""
     if request.method == 'POST':
         logger.info(f"Test POST received: {request.get_json()}")
     return jsonify({
@@ -468,28 +437,23 @@ def register():
     try:
         data = request.json
         
-        # Validate input
         kcse_index = data.get('kcse_index', '').strip()
         email = data.get('email', '').strip().lower()
         phone_number = data.get('phone_number', '').strip()
         
         logger.info(f"Registration attempt - Index: {kcse_index}, Email: {email}")
         
-        # Validate KCSE index
         is_valid_index, index_msg = validate_kcse_index(kcse_index)
         if not is_valid_index:
             return jsonify({'success': False, 'error': index_msg}), 400
         
-        # Validate email
         if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
             return jsonify({'success': False, 'error': 'Invalid email address'}), 400
         
-        # Validate phone number
         is_valid_phone, formatted_phone = validate_phone_number(phone_number)
         if not is_valid_phone:
             return jsonify({'success': False, 'error': formatted_phone}), 400
         
-        # Check for manual activation first
         manual_user = users_collection.find_one({
             '$or': [{'kcse_index': kcse_index}, {'email': email}],
             'manual_activation': True,
@@ -503,7 +467,6 @@ def register():
                 session['user_id'] = manual_user['user_id']
                 session['kcse_index'] = kcse_index
                 session['email'] = email
-                
                 return jsonify({
                     'success': True,
                     'message': 'Manual payment verified',
@@ -512,7 +475,6 @@ def register():
                     'payment_method': 'manual'
                 })
         
-        # Check existing user
         existing_user = users_collection.find_one({
             '$or': [{'kcse_index': kcse_index}, {'email': email}]
         })
@@ -525,7 +487,6 @@ def register():
                 session['user_id'] = user_id
                 session['kcse_index'] = kcse_index
                 session['email'] = email
-                
                 return jsonify({
                     'success': True,
                     'message': 'User already registered and paid',
@@ -552,16 +513,13 @@ def register():
             }
             users_collection.insert_one(user_data)
         
-        # Store in session
         session['user_id'] = user_id
         session['kcse_index'] = kcse_index
         session['email'] = email
         
-        # Check for local development or missing M-Pesa credentials
         is_local = request.host_url and ('localhost' in request.host_url or '127.0.0.1' in request.host_url)
         
         if is_local or not MPESA_CONFIG['consumer_key']:
-            # Simulation mode
             checkout_request_id = f'SIM_{user_id}_{int(time.time())}'
             mpesa_receipt = f'SIM{random.randint(100000, 999999)}'
             
@@ -592,7 +550,6 @@ def register():
                 'simulation_mode': True
             })
         
-        # Production - Initiate M-Pesa payment
         payment_response = initiate_stk_push(
             phone_number=formatted_phone,
             amount=PAYMENT_AMOUNT,
@@ -639,19 +596,16 @@ def register():
 
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
-    """M-Pesa payment callback endpoint - PRODUCTION READY"""
     try:
         print("=" * 80)
         print(f"📞 M-PESA CALLBACK RECEIVED at {datetime.now().isoformat()}")
         
-        # Get raw data
         raw_data = request.get_data(as_text=True)
         print(f"Raw data length: {len(raw_data)}")
         print(f"Raw data: {raw_data[:500]}")
         
-        # SAVE RAW CALLBACK IMMEDIATELY (for audit and debugging)
         callback_id = str(uuid.uuid4())
-        if db:
+        if db is not None:
             db.raw_callbacks.insert_one({
                 'callback_id': callback_id,
                 'raw_data': raw_data,
@@ -661,10 +615,8 @@ def mpesa_callback():
             })
             print(f"✅ Raw callback saved with ID: {callback_id}")
         
-        # Parse JSON with multiple methods
         data = None
         
-        # Method 1: Standard JSON parsing
         try:
             data = request.get_json(force=True, silent=True)
             if data:
@@ -672,11 +624,9 @@ def mpesa_callback():
         except Exception as e:
             print(f"⚠️ Method 1 failed: {e}")
         
-        # Method 2: Clean and parse
         if not data and raw_data:
             try:
                 import re
-                # Find the first valid JSON object
                 json_match = re.search(r'\{.*\}', raw_data, re.DOTALL)
                 if json_match:
                     cleaned_data = json_match.group()
@@ -685,10 +635,8 @@ def mpesa_callback():
             except Exception as e:
                 print(f"⚠️ Method 2 failed: {e}")
         
-        # Method 3: Try to fix common JSON issues
         if not data and raw_data:
             try:
-                # Remove any trailing characters after the last }
                 cleaned_data = raw_data.strip()
                 last_brace = cleaned_data.rfind('}')
                 if last_brace > 0:
@@ -700,18 +648,15 @@ def mpesa_callback():
         
         if not data:
             print("❌ Could not parse callback data")
-            if db:
-                db.failed_callbacks.update_one(
-                    {'callback_id': callback_id},
-                    {'$set': {
-                        'processed': False,
-                        'error': 'JSON parse failed',
-                        'updated_at': datetime.now()
-                    }}
-                )
+            if db is not None:
+                db.failed_callbacks.insert_one({
+                    'callback_id': callback_id,
+                    'raw_data': raw_data,
+                    'error': 'JSON parse failed',
+                    'received_at': datetime.now()
+                })
             return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
         
-        # Extract callback data
         callback_data = None
         if 'Body' in data and 'stkCallback' in data['Body']:
             callback_data = data['Body']['stkCallback']
@@ -720,10 +665,8 @@ def mpesa_callback():
         
         if not callback_data:
             print("❌ Could not extract stkCallback from data")
-            print(f"Available keys: {data.keys()}")
             return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
         
-        # Extract payment details
         checkout_id = callback_data.get('CheckoutRequestID')
         merchant_id = callback_data.get('MerchantRequestID')
         result_code = callback_data.get('ResultCode')
@@ -736,34 +679,26 @@ def mpesa_callback():
         print(f"  ResultDesc: {result_desc}")
         
         if not checkout_id and not merchant_id:
-            print("❌ No identifiers found")
             return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
         
-        # Find payment record - TRY BOTH IDENTIFIERS
         payment_record = None
         
         if checkout_id:
-            payment_record = payments_collection.find_one({
-                'mpesa_request_id': checkout_id
-            })
+            payment_record = payments_collection.find_one({'mpesa_request_id': checkout_id})
             if payment_record:
                 print(f"✅ Found payment by CheckoutRequestID: {checkout_id}")
         
         if not payment_record and merchant_id:
-            payment_record = payments_collection.find_one({
-                'merchant_request_id': merchant_id
-            })
+            payment_record = payments_collection.find_one({'merchant_request_id': merchant_id})
             if payment_record:
                 print(f"✅ Found payment by MerchantRequestID: {merchant_id}")
         
-        # If still not found, try by phone number from callback
         if not payment_record and callback_data.get('CallbackMetadata'):
             metadata = callback_data.get('CallbackMetadata', {})
             items = metadata.get('Item', [])
             for item in items:
                 if item.get('Name') == 'PhoneNumber':
                     phone = item.get('Value', '')
-                    # Find most recent pending payment for this phone
                     payment_record = payments_collection.find_one({
                         'phone_number': {'$regex': phone[-9:]},
                         'status': 'pending'
@@ -773,9 +708,8 @@ def mpesa_callback():
                         break
         
         if not payment_record:
-            print(f"⚠️ Payment record not found for {checkout_id or merchant_id}")
-            # Store unmatched callback for manual processing
-            if db:
+            print(f"⚠️ Payment record not found")
+            if db is not None:
                 db.unmatched_callbacks.insert_one({
                     'callback_id': callback_id,
                     'checkout_request_id': checkout_id,
@@ -792,10 +726,8 @@ def mpesa_callback():
         print(f"✅ Found payment for user: {payment_record['user_id']}")
         
         if result_code == 0:
-            # PAYMENT SUCCESSFUL - Process it
             print("💰 Processing successful payment...")
             
-            # Extract metadata
             metadata = callback_data.get('CallbackMetadata', {})
             items = metadata.get('Item', []) if isinstance(metadata, dict) else []
             
@@ -804,8 +736,6 @@ def mpesa_callback():
                 if isinstance(item, dict):
                     if 'Name' in item and 'Value' in item:
                         payment_details[item['Name']] = item['Value']
-                    elif 'key' in item and 'value' in item:
-                        payment_details[item['key']] = item['value']
             
             receipt = payment_details.get('MpesaReceiptNumber', '')
             transaction_date = str(payment_details.get('TransactionDate', ''))
@@ -818,8 +748,7 @@ def mpesa_callback():
             print(f"  Phone: {phone}")
             print(f"  Amount: {amount}")
             
-            # UPDATE PAYMENT RECORD
-            payment_update = payments_collection.update_one(
+            payments_collection.update_one(
                 {'_id': payment_record['_id']},
                 {'$set': {
                     'status': 'completed',
@@ -834,14 +763,9 @@ def mpesa_callback():
                     'updated_at': datetime.now()
                 }}
             )
+            print(f"✅ Payment record updated")
             
-            if payment_update.modified_count > 0:
-                print(f"✅ Payment record updated successfully")
-            else:
-                print(f"⚠️ Payment record already had status: {payment_record.get('status')}")
-            
-            # UPDATE USER RECORD
-            user_update = users_collection.update_one(
+            users_collection.update_one(
                 {'user_id': payment_record['user_id']},
                 {'$set': {
                     'payment_status': 'completed',
@@ -851,14 +775,9 @@ def mpesa_callback():
                     'updated_at': datetime.now()
                 }}
             )
+            print(f"✅ User {payment_record['user_id']} updated")
             
-            if user_update.modified_count > 0:
-                print(f"✅ User {payment_record['user_id']} updated successfully")
-            else:
-                print(f"⚠️ User already had payment_status: {users_collection.find_one({'_id': payment_record['user_id']}).get('payment_status')}")
-            
-            # UPDATE RAW CALLBACK AS PROCESSED
-            if db:
+            if db is not None:
                 db.raw_callbacks.update_one(
                     {'callback_id': callback_id},
                     {'$set': {
@@ -874,11 +793,7 @@ def mpesa_callback():
             print(f"   User: {payment_record['user_id']}")
             print(f"   Receipt: {receipt}")
             
-            # OPTIONAL: Send confirmation to user (if you have email/SMS)
-            # send_payment_confirmation(payment_record['user_id'], receipt)
-            
         else:
-            # PAYMENT FAILED
             print(f"❌ Payment failed: {result_desc}")
             
             payments_collection.update_one(
@@ -892,7 +807,7 @@ def mpesa_callback():
                 }}
             )
             
-            if db:
+            if db is not None:
                 db.raw_callbacks.update_one(
                     {'callback_id': callback_id},
                     {'$set': {
@@ -908,24 +823,19 @@ def mpesa_callback():
         
     except Exception as e:
         print(f"❌ Callback error: {str(e)}")
-        import traceback
         traceback.print_exc()
         
-        # Save error for debugging
-        if db:
+        if db is not None:
             db.callback_errors.insert_one({
                 'error': str(e),
                 'traceback': traceback.format_exc(),
-                'received_at': datetime.now(),
-                'raw_data': raw_data if 'raw_data' in locals() else None
+                'received_at': datetime.now()
             })
         
-        # ALWAYS return success to M-Pesa
         return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
 
 @app.route('/check_payment/<checkout_request_id>')
 def check_payment(checkout_request_id):
-    """Check payment status"""
     try:
         if 'user_id' not in session:
             return jsonify({'success': False, 'error': 'Unauthorized'}), 401
@@ -963,7 +873,6 @@ def check_payment(checkout_request_id):
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
-    """Calculate cluster points"""
     try:
         if 'user_id' not in session:
             return jsonify({
@@ -981,7 +890,6 @@ def calculate():
                 'redirect': True
             }), 402
         
-        # Get grades from request
         data = request.json if request.is_json else request.form.to_dict()
         
         grades = {}
@@ -1000,7 +908,6 @@ def calculate():
                     grades[field] = str(grade).strip().upper()
                     subjects_with_grades += 1
         
-        # Calculate results for all clusters
         results = {}
         cluster_details = {}
         
@@ -1012,10 +919,8 @@ def calculate():
                 'description': CLUSTERS.get(cluster_id, {}).get('description', '')
             }
         
-        # Calculate aggregate points
         aggregate_points, top_7_subjects = get_aggregate_points(grades)
         
-        # Save results
         result_id = str(uuid.uuid4())
         result_data = {
             'result_id': result_id,
@@ -1048,7 +953,6 @@ def calculate():
 
 @app.route('/my_results')
 def my_results():
-    """Get user's calculation history"""
     try:
         if 'user_id' not in session:
             return jsonify({'success': False, 'error': 'Not logged in'}), 401
@@ -1087,7 +991,6 @@ def my_results():
 
 @app.route('/retrieve_results', methods=['POST'])
 def retrieve_results():
-    """Retrieve results using KCSE index and M-Pesa receipt"""
     try:
         data = request.json
         kcse_index = data.get('kcse_index', '').strip()
@@ -1133,7 +1036,6 @@ def retrieve_results():
 
 @app.route('/logout')
 def logout():
-    """Logout user"""
     session.clear()
     return jsonify({'success': True, 'message': 'Logged out successfully'})
 
@@ -1222,7 +1124,6 @@ def admin_manual_payment():
         mpesa_receipt = data.get('mpesa_receipt', '').strip().upper()
         phone_number = data.get('phone_number', '').strip()
         
-        # Check if user exists
         user = users_collection.find_one({
             '$or': [{'kcse_index': kcse_index}, {'email': email}]
         })
@@ -1253,7 +1154,6 @@ def admin_manual_payment():
                 'activated_at': datetime.now()
             })
         
-        # Create payment record
         payments_collection.insert_one({
             'transaction_id': str(uuid.uuid4()),
             'user_id': user_id,
@@ -1274,11 +1174,10 @@ def admin_manual_payment():
 @admin_required
 def admin_delete_user(user_id):
     try:
-        user_result = users_collection.delete_one({'user_id': user_id})
+        users_collection.delete_one({'user_id': user_id})
         payments_collection.delete_many({'user_id': user_id})
         results_collection.delete_many({'user_id': user_id})
         pdfs_collection.delete_many({'user_id': user_id})
-        
         return jsonify({'success': True, 'message': f'User {user_id} deleted'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1296,7 +1195,6 @@ def admin_failed_payments():
 
 @app.route('/admin/api/check-manual-payment', methods=['POST'])
 def check_manual_payment():
-    """Check if user has manual payment"""
     try:
         data = request.json
         identifier = data.get('identifier', '').strip().lower()
@@ -1344,8 +1242,6 @@ if __name__ == '__main__':
     print("=" * 60)
     
     port = int(os.environ.get('PORT', 5000))
-    
-    # Check if running on Render
     is_render = os.environ.get('RENDER', False)
     
     if is_render:
@@ -1355,7 +1251,6 @@ if __name__ == '__main__':
         print("Press CTRL+C to quit")
         print("=" * 60)
         
-        # Use waitress if available for production-like server
         try:
             from waitress import serve
             serve(app, host='0.0.0.0', port=port, threads=4)
