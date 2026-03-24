@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KCSE Cluster Points Calculator - KUCCPS Admission Guide</title>
+    <title>KCSE Cluster Points Calculator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -272,6 +272,16 @@
             margin-bottom: 10px;
         }
         
+        .cluster-subjects {
+            font-size: 0.85rem;
+            color: var(--kuccps-black);
+            background: rgba(198, 40, 40, 0.05);
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+            display: none;
+        }
+        
         .points-high {
             color: var(--kuccps-green);
             font-weight: 700;
@@ -353,6 +363,91 @@
             color: var(--kuccps-medium-grey);
         }
         
+        .formula-display {
+            background: var(--kuccps-white);
+            border: 2px dashed var(--kuccps-blue);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .subject-badge {
+            display: inline-block;
+            background: var(--kuccps-light-grey);
+            border: 1px solid var(--kuccps-medium-grey);
+            border-radius: 15px;
+            padding: 3px 10px;
+            margin: 2px;
+            font-size: 0.85rem;
+            color: var(--kuccps-black);
+        }
+        
+        .subject-badge.grade-A { background: #e8f5e9; border-color: var(--kuccps-green); }
+        .subject-badge.grade-B { background: #fff3e0; border-color: var(--kuccps-yellow); }
+        .subject-badge.grade-C { background: #f3e5f5; border-color: var(--kuccps-purple); }
+        .subject-badge.grade-D { background: #f5f5f5; border-color: var(--kuccps-medium-grey); }
+        .subject-badge.grade-E { background: #ffebee; border-color: var(--kuccps-red); }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--kuccps-red) 0%, #B71C1C 100%);
+            color: white;
+        }
+        
+        .subject-details {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .subject-detail-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--kuccps-light-grey);
+        }
+        
+        .subject-detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .subject-grade {
+            font-weight: 600;
+            color: var(--kuccps-black);
+        }
+        
+        .subject-points {
+            font-weight: 700;
+            color: var(--kuccps-red);
+        }
+        
+        .requirement-badge {
+            background: var(--kuccps-light-grey);
+            color: var(--kuccps-black);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        
+        .manual-payment-badge {
+            background: var(--kuccps-purple);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .manual-payment-indicator {
+            background: var(--kuccps-purple);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            border: 2px solid var(--kuccps-yellow);
+        }
+        
         .step-indicator {
             display: flex;
             justify-content: center;
@@ -393,6 +488,10 @@
             background: var(--kuccps-green);
         }
         
+        .step.manual .step-number {
+            background: var(--kuccps-purple);
+        }
+        
         .step-label {
             font-size: 0.9rem;
             font-weight: 500;
@@ -408,6 +507,10 @@
             color: var(--kuccps-green);
         }
         
+        .step.manual .step-label {
+            color: var(--kuccps-purple);
+        }
+        
         .step-line {
             position: absolute;
             top: 20px;
@@ -420,6 +523,14 @@
         
         .step:first-child .step-line {
             display: none;
+        }
+        
+        .quick-pay-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #dee2e6;
         }
         
         .mpesa-instructions {
@@ -439,8 +550,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
         }
         
         .sort-buttons {
@@ -484,15 +593,8 @@
             opacity: 0.7;
         }
         
-        .manual-payment-indicator {
-            background: var(--kuccps-purple);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-            border: 2px solid var(--kuccps-yellow);
+        .cluster-card.manual {
+            border-left: 5px solid var(--kuccps-purple);
         }
         
         @media (max-width: 768px) {
@@ -511,6 +613,11 @@
                 grid-template-columns: 1fr;
             }
             
+            .formula-display {
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+            
             .step {
                 padding: 0 10px;
             }
@@ -518,115 +625,134 @@
             .step-label {
                 font-size: 0.8rem;
             }
-            
-            .user-info-bar {
-                flex-direction: column;
-                text-align: center;
-            }
         }
         
-        .subject-badge {
-            display: inline-block;
-            background: var(--kuccps-light-grey);
-            border: 1px solid var(--kuccps-medium-grey);
-            border-radius: 15px;
-            padding: 3px 10px;
-            margin: 2px;
-            font-size: 0.85rem;
+        .sample-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--kuccps-yellow);
             color: var(--kuccps-black);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
         }
         
-        .subject-details {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .subject-detail-item {
-            padding: 8px 0;
-            border-bottom: 1px solid var(--kuccps-light-grey);
-        }
-        
-        .requirement-badge {
-            background: var(--kuccps-light-grey);
-            color: var(--kuccps-black);
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            margin-left: 5px;
+        .sample-btn:hover {
+            background: #f9a825;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.25);
         }
     </style>
 </head>
 <body>
+    <!-- Loading Spinner -->
     <div id="loadingSpinner" class="loading-spinner">
         <div class="spinner"></div>
-        <div class="mt-3" style="color: var(--kuccps-red); font-weight: 700;" id="loadingText">Processing...</div>
+        <div class="mt-3" style="color: var(--kuccps-red); font-weight: 700;" id="loadingText">Loading...</div>
     </div>
 
-    <!-- User Details Modal -->
+    <!-- Step 2: User Details Modal -->
     <div class="modal fade" id="userDetailsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Complete Registration</h5>
+                    <h5 class="modal-title">Step 2: Enter Your Details</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="step-indicator mb-4">
-                        <div class="step completed"><div class="step-number">1</div><span class="step-label">Grades</span><div class="step-line"></div></div>
-                        <div class="step active"><div class="step-number">2</div><span class="step-label">Details</span><div class="step-line"></div></div>
-                        <div class="step"><div class="step-number">3</div><span class="step-label">Payment</span><div class="step-line"></div></div>
-                        <div class="step"><div class="step-number">4</div><span class="step-label">Results</span></div>
+                    <!-- Step Indicator -->
+                    <div class="step-indicator">
+                        <div class="step completed">
+                            <div class="step-number">1</div>
+                            <span class="step-label">Enter Grades</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step active">
+                            <div class="step-number">2</div>
+                            <span class="step-label">Your Details</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <span class="step-label">Payment</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <span class="step-label">Results</span>
+                        </div>
                     </div>
                     
+                    <!-- Manual Payment Indicator (Hidden by default) -->
                     <div id="manualPaymentIndicator" class="manual-payment-indicator" style="display: none;">
                         <i class="fas fa-check-circle me-2"></i>
-                        <strong>Manual Payment Detected!</strong>
+                        <strong>✓ Manual Payment Verified!</strong>
                         <p class="mb-0 mt-2">You can proceed directly to calculation without M-Pesa payment.</p>
                     </div>
                     
                     <div class="alert alert-info mb-4">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Important:</strong> Complete your details to calculate cluster points. Payment is Ksh 100.
+                        <strong>Important:</strong> You need to register and pay Ksh 100 to calculate your cluster points.
+                        <span id="manualPaymentNote" style="display: none;"> However, a manual payment has been found for your account.</span>
                     </div>
                     
                     <form id="userDetailsForm">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="user_kcse_index" class="form-label">KCSE Index Number *</label>
-                                <input type="text" class="form-control" id="user_kcse_index" 
-                                       placeholder="12345678912/2024" required>
-                                <small class="text-muted">Format: 11 digits followed by /year</small>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="user_kcse_index" class="form-label">
+                                        <i class="fas fa-id-card me-1"></i> KCSE Index Number
+                                    </label>
+                                    <input type="text" class="form-control" id="user_kcse_index" 
+                                           placeholder="12345678912/2024" required
+                                           onblur="checkManualPayment(this.value)">
+                                    <div class="form-text">Format: 11 digits followed by /year</div>
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="user_email" class="form-label">Email Address *</label>
-                                <input type="email" class="form-control" id="user_email" 
-                                       placeholder="your.email@example.com" required>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="user_email" class="form-label">
+                                        <i class="fas fa-envelope me-1"></i> Email Address
+                                    </label>
+                                    <input type="email" class="form-control" id="user_email" 
+                                           placeholder="your.email@example.com" required
+                                           onblur="checkManualPayment(this.value)">
+                                </div>
                             </div>
                         </div>
                         
                         <div class="mb-4">
-                            <label for="user_phone_number" class="form-label">M-Pesa Phone Number *</label>
+                            <label for="user_phone_number" class="form-label">
+                                <i class="fas fa-phone me-1"></i> M-Pesa Phone Number
+                            </label>
                             <input type="tel" class="form-control" id="user_phone_number" 
-                                   placeholder="0712345678" required>
-                            <small class="text-muted">For payment confirmation</small>
+                                   placeholder="0712345678 or 254712345678" required>
+                            <div class="form-text">For payment and results delivery</div>
                         </div>
                         
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-register" id="continueToPaymentBtn">
                                 <i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </button>
                         </div>
                     </form>
                     
-                    <div class="mpesa-instructions mt-4">
+                    <div class="mt-4 mpesa-instructions">
                         <h6><i class="fas fa-mobile-alt me-2"></i>Payment Instructions:</h6>
-                        <ol class="mb-0 small">
+                        <ol class="mb-0">
                             <li>Enter your M-Pesa registered phone number</li>
                             <li>Click "Continue to Payment"</li>
                             <li>Check your phone for STK Push notification</li>
                             <li>Enter your M-Pesa PIN to complete payment</li>
-                            <li>Results will be calculated automatically</li>
+                            <li>Once payment is confirmed, your cluster points will be calculated</li>
                         </ol>
                     </div>
                 </div>
@@ -634,34 +760,54 @@
         </div>
     </div>
 
-    <!-- Payment Modal -->
-    <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+    <!-- Payment Processing Modal -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog modal-md">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Processing Payment</h5>
+                    <h5 class="modal-title">Step 3: Processing Payment</h5>
                 </div>
                 <div class="modal-body text-center">
-                    <div class="step-indicator mb-4" style="margin: 0;">
-                        <div class="step completed"><div class="step-number">1</div><span class="step-label">Grades</span><div class="step-line"></div></div>
-                        <div class="step completed"><div class="step-number">2</div><span class="step-label">Details</span><div class="step-line"></div></div>
-                        <div class="step active"><div class="step-number">3</div><span class="step-label">Payment</span><div class="step-line"></div></div>
-                        <div class="step"><div class="step-number">4</div><span class="step-label">Results</span></div>
+                    <!-- Step Indicator -->
+                    <div class="step-indicator" style="margin: 0 0 20px 0; font-size: 0.9rem;">
+                        <div class="step completed">
+                            <div class="step-number">1</div>
+                            <span class="step-label">Grades</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step completed">
+                            <div class="step-number">2</div>
+                            <span class="step-label">Details</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step active">
+                            <div class="step-number">3</div>
+                            <span class="step-label">Payment</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <span class="step-label">Results</span>
+                        </div>
                     </div>
                     
                     <div class="spinner mb-3" style="margin: 0 auto;"></div>
                     <h5 id="paymentStatusText">Initiating payment...</h5>
-                    <p id="paymentInstructions" class="mt-2">Please wait...</p>
+                    <p id="paymentInstructions" class="mt-2">
+                        Please wait while we process your payment...
+                    </p>
                     <div id="paymentSuccess" style="display: none;">
                         <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                         <h5>Payment Successful!</h5>
-                        <p>Calculating your results...</p>
+                        <p>Calculating your cluster points...</p>
                     </div>
                     <div id="paymentError" style="display: none;">
                         <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
                         <h5>Payment Failed</h5>
                         <p id="errorMessage"></p>
-                        <button class="btn btn-danger" id="retryPaymentBtn">Try Again</button>
+                        <button class="btn btn-danger" id="retryPaymentBtn">
+                            <i class="fas fa-redo me-2"></i> Try Again
+                        </button>
                     </div>
                 </div>
             </div>
@@ -676,34 +822,13 @@
                     <h5 class="modal-title" id="modalTitle">Cluster Details</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="modalContent"></div>
+                <div class="modal-body">
+                    <div id="modalContent">
+                        <!-- Content will be loaded here -->
+                    </div>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Retrieve Results Modal -->
-    <div class="modal fade" id="retrieveModal" tabindex="-1">
-        <div class="modal-dialog modal-md">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Retrieve Your Results</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="retrieveForm">
-                        <div class="mb-3">
-                            <label for="retrieve_kcse_index" class="form-label">KCSE Index Number</label>
-                            <input type="text" class="form-control" id="retrieve_kcse_index" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="mpesa_receipt" class="form-label">M-Pesa Receipt Number</label>
-                            <input type="text" class="form-control" id="mpesa_receipt" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Retrieve Results</button>
-                    </form>
                 </div>
             </div>
         </div>
@@ -716,545 +841,1952 @@
                     <i class="fas fa-calculator fa-3x me-3" style="color: var(--kuccps-yellow);"></i>
                     <div>
                         <h1 class="mb-1">KCSE Cluster Points Calculator</h1>
-                        <p class="mb-0">Calculate your KUCCPS cluster points for university admission</p>
+                        <p class="mb-0">Enter your KCSE grades to calculate cluster points for KUCCPS degree programmes</p>
                     </div>
                 </div>
             </div>
             
             <div class="card-body p-4">
+                <!-- Step Indicator -->
                 <div class="step-indicator" id="mainStepIndicator">
-                    <div class="step active" id="step1"><div class="step-number">1</div><span class="step-label">Enter Grades</span><div class="step-line"></div></div>
-                    <div class="step" id="step2"><div class="step-number">2</div><span class="step-label">Your Details</span><div class="step-line"></div></div>
-                    <div class="step" id="step3"><div class="step-number">3</div><span class="step-label">Payment</span><div class="step-line"></div></div>
-                    <div class="step" id="step4"><div class="step-number">4</div><span class="step-label">Results</span></div>
+                    <div class="step active" id="step1">
+                        <div class="step-number">1</div>
+                        <span class="step-label">Enter Grades</span>
+                        <div class="step-line"></div>
+                    </div>
+                    <div class="step" id="step2">
+                        <div class="step-number">2</div>
+                        <span class="step-label">Your Details</span>
+                        <div class="step-line"></div>
+                    </div>
+                    <div class="step" id="step3">
+                        <div class="step-number">3</div>
+                        <span class="step-label">Payment</span>
+                        <div class="step-line"></div>
+                    </div>
+                    <div class="step" id="step4">
+                        <div class="step-number">4</div>
+                        <span class="step-label">Results</span>
+                    </div>
                 </div>
                 
-                <div id="userStatusBar" class="user-info-bar" style="display: none;"></div>
-                
-                <div id="manualPaymentBanner" class="alert-manual" style="display: none; padding: 15px; margin-bottom: 20px;">
-                    <i class="fas fa-check-circle me-2"></i>
-                    <strong>Manual Payment Detected!</strong>
-                    <span id="manualPaymentMessage"></span>
+                <!-- User Status Display -->
+                <div id="userStatusBar" class="alert alert-info" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <i class="fas fa-user-check me-2"></i>
+                            <span id="userStatusText"></span>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="checkUserStatus()">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="logoutUser()">
+                                <i class="fas fa-sign-out-alt me-1"></i> Logout
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="alert alert-info mb-4 d-flex justify-content-between align-items-center">
-                    <div><i class="fas fa-search me-2"></i>Already paid? Retrieve your results</div>
-                    <button class="btn btn-sm btn-primary" onclick="showRetrieveModal()">Retrieve Results</button>
+                <!-- Already Paid? Retrieve Results -->
+                <div class="alert alert-info" style="margin-bottom: 25px;">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-search me-2"></i>Already Paid? Retrieve Your Results</h5>
+                            <p class="mb-0">Enter your KCSE index and M-Pesa receipt number to view previous results</p>
+                        </div>
+                        <button class="btn btn-primary mt-2 mt-md-0" onclick="showRetrieveModal()">
+                            <i class="fas fa-search me-2"></i> Retrieve Results
+                        </button>
+                    </div>
                 </div>
                 
+                <!-- Manual Payment Banner (Appears when manual payment detected) -->
+                <div id="manualPaymentBanner" class="alert-manual" style="display: none; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3" style="color: var(--kuccps-purple);"></i>
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-hand-holding-usd me-2"></i>Manual Payment Detected</h5>
+                            <p class="mb-0" id="manualPaymentMessage">A manual payment has been found for your account. You can proceed directly to calculation.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Retrieve Results Modal -->
+                <div class="modal fade" id="retrieveModal" tabindex="-1">
+                    <div class="modal-dialog modal-md">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Retrieve Your Results</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="retrieveForm">
+                                    <div class="mb-3">
+                                        <label for="retrieve_kcse_index" class="form-label">KCSE Index Number</label>
+                                        <input type="text" class="form-control" id="retrieve_kcse_index" 
+                                               placeholder="12345678912/2024" required>
+                                        <div class="form-text">Format: 11 digits followed by /year</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="mpesa_receipt" class="form-label">M-Pesa Receipt Number</label>
+                                        <input type="text" class="form-control" id="mpesa_receipt" 
+                                               placeholder="ABC123XYZ45" required>
+                                        <div class="form-text">10-digit code from your M-Pesa confirmation message</div>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary" id="retrieveBtn">
+                                            <i class="fas fa-search me-2"></i> Retrieve Results
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                                
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Enter the KCSE index number and M-Pesa receipt number you used during payment.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Grades Form -->
                 <form id="gradesForm">
-                    <h3 class="mb-4"><i class="fas fa-book-open" style="color: var(--kuccps-red);"></i> Step 1: Enter Your KCSE Grades</h3>
+                    <h3 class="mb-4"><i class="fas fa-book-open" style="color: var(--kuccps-red);"></i> Step 1: Enter KCSE Grades</h3>
                     
-                    <!-- Core Subjects -->
+                    <!-- Core Subjects (Group I) -->
                     <div class="subject-category">
                         <h4 class="category-title"><i class="fas fa-star"></i> Core Subjects</h4>
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="mathematics" class="form-label">Mathematics *</label>
+                                    <label for="mathematics" class="form-label">Mathematics:</label>
                                     <select id="mathematics" name="mathematics" class="form-select" required>
                                         <option value="">Select Grade</option>
-                                        <option value="A">A (12 points)</option><option value="A-">A- (11 points)</option>
-                                        <option value="B+">B+ (10 points)</option><option value="B">B (9 points)</option>
-                                        <option value="B-">B- (8 points)</option><option value="C+">C+ (7 points)</option>
-                                        <option value="C">C (6 points)</option><option value="C-">C- (5 points)</option>
-                                        <option value="D+">D+ (4 points)</option><option value="D">D (3 points)</option>
-                                        <option value="D-">D- (2 points)</option><option value="E">E (1 point)</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="english" class="form-label">English *</label>
+                                    <label for="english" class="form-label">English:</label>
                                     <select id="english" name="english" class="form-select" required>
                                         <option value="">Select Grade</option>
-                                        <option value="A">A (12 points)</option><option value="A-">A- (11 points)</option>
-                                        <option value="B+">B+ (10 points)</option><option value="B">B (9 points)</option>
-                                        <option value="B-">B- (8 points)</option><option value="C+">C+ (7 points)</option>
-                                        <option value="C">C (6 points)</option><option value="C-">C- (5 points)</option>
-                                        <option value="D+">D+ (4 points)</option><option value="D">D (3 points)</option>
-                                        <option value="D-">D- (2 points)</option><option value="E">E (1 point)</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="kiswahili" class="form-label">Kiswahili</label>
+                                    <label for="kiswahili" class="form-label">Kiswahili:</label>
                                     <select id="kiswahili" name="kiswahili" class="form-select">
                                         <option value="">Select Grade</option>
-                                        <option value="A">A (12 points)</option><option value="A-">A- (11 points)</option>
-                                        <option value="B+">B+ (10 points)</option><option value="B">B (9 points)</option>
-                                        <option value="B-">B- (8 points)</option><option value="C+">C+ (7 points)</option>
-                                        <option value="C">C (6 points)</option><option value="C-">C- (5 points)</option>
-                                        <option value="D+">D+ (4 points)</option><option value="D">D (3 points)</option>
-                                        <option value="D-">D- (2 points)</option><option value="E">E (1 point)</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Sciences -->
+                    <!-- Sciences (Group II) -->
                     <div class="subject-category">
                         <h4 class="category-title"><i class="fas fa-flask"></i> Sciences</h4>
                         <div class="row">
-                            <div class="col-md-3"><div class="form-group"><label for="physics" class="form-label">Physics</label><select id="physics" name="physics" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-3"><div class="form-group"><label for="chemistry" class="form-label">Chemistry</label><select id="chemistry" name="chemistry" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-3"><div class="form-group"><label for="biology" class="form-label">Biology</label><select id="biology" name="biology" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-3"><div class="form-group"><label for="general_science" class="form-label">General Science</label><select id="general_science" name="general_science" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="physics" class="form-label">Physics:</label>
+                                    <select id="physics" name="physics" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="chemistry" class="form-label">Chemistry:</label>
+                                    <select id="chemistry" name="chemistry" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="biology" class="form-label">Biology:</label>
+                                    <select id="biology" name="biology" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="general_science" class="form-label">General Science:</label>
+                                    <select id="general_science" name="general_science" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Humanities -->
+                    <!-- Humanities (Group III) -->
                     <div class="subject-category">
                         <h4 class="category-title"><i class="fas fa-globe-africa"></i> Humanities</h4>
                         <div class="row">
-                            <div class="col-md-3"><div class="form-group"><label for="geography" class="form-label">Geography</label><select id="geography" name="geography" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-3"><div class="form-group"><label for="history" class="form-label">History</label><select id="history" name="history" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-2"><div class="form-group"><label for="cre" class="form-label">CRE</label><select id="cre" name="cre" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-2"><div class="form-group"><label for="ire" class="form-label">IRE</label><select id="ire" name="ire" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-2"><div class="form-group"><label for="hre" class="form-label">HRE</label><select id="hre" name="hre" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="geography" class="form-label">Geography:</label>
+                                    <select id="geography" name="geography" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history" class="form-label">History & Government:</label>
+                                    <select id="history" name="history" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label for="cre" class="form-label">CRE:</label>
+                                    <select id="cre" name="cre" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label for="ire" class="form-label">IRE:</label>
+                                    <select id="ire" name="ire" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label for="hre" class="form-label">HRE:</label>
+                                    <select id="hre" name="hre" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Technical Subjects (simplified for brevity - same pattern continues) -->
+                    <!-- Technical Subjects (Group IV) -->
                     <div class="subject-category">
-                        <h4 class="category-title"><i class="fas fa-cogs"></i> Technical & Applied Subjects</h4>
+                        <h4 class="category-title"><i class="fas fa-cogs"></i> Technical Subjects</h4>
                         <div class="row">
-                            <div class="col-md-3"><div class="form-group"><label for="agriculture" class="form-label">Agriculture</label><select id="agriculture" name="agriculture" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-3"><div class="form-group"><label for="computer" class="form-label">Computer Studies</label><select id="computer" name="computer" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-3"><div class="form-group"><label for="business" class="form-label">Business Studies</label><select id="business" name="business" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
-                            <div class="col-md-3"><div class="form-group"><label for="music" class="form-label">Music</label><select id="music" name="music" class="form-select"><option value="">Select Grade</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+</option><option value="D">D</option><option value="D-">D-</option><option value="E">E</option></select></div></div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="agriculture" class="form-label">Agriculture:</label>
+                                    <select id="agriculture" name="agriculture" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="computer" class="form-label">Computer Studies:</label>
+                                    <select id="computer" name="computer" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="arts" class="form-label">Art & Design:</label>
+                                    <select id="arts" name="arts" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="homescience" class="form-label">Home Science:</label>
+                                    <select id="homescience" name="homescience" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="business" class="form-label">Business Studies:</label>
+                                    <select id="business" name="business" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="woodwork" class="form-label">Woodwork:</label>
+                                    <select id="woodwork" name="woodwork" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="metalwork" class="form-label">Metalwork:</label>
+                                    <select id="metalwork" name="metalwork" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="building" class="form-label">Building Construction:</label>
+                                    <select id="building" name="building" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="electronics" class="form-label">Electricity & Electronics:</label>
+                                    <select id="electronics" name="electronics" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="aviation" class="form-label">Aviation Technology:</label>
+                                    <select id="aviation" name="aviation" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="drawing_design" class="form-label">Drawing & Design:</label>
+                                    <select id="drawing_design" name="drawing_design" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="power_mechanics" class="form-label">Power Mechanics:</label>
+                                    <select id="power_mechanics" name="power_mechanics" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="text-center mt-5">
-                        <button type="submit" class="btn btn-calculate me-3">Calculate Cluster Points</button>
-                        <button type="button" class="btn btn-reset" onclick="resetForm()">Reset Form</button>
+                    <!-- Foreign Languages & Others (Group V) -->
+                    <div class="subject-category">
+                        <h4 class="category-title"><i class="fas fa-language"></i> Foreign Languages</h4>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="french" class="form-label">French:</label>
+                                    <select id="french" name="french" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="german" class="form-label">German:</label>
+                                    <select id="german" name="german" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="arabic" class="form-label">Arabic:</label>
+                                    <select id="arabic" name="arabic" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="kenya_sign_language" class="form-label">Kenya Sign Language:</label>
+                                    <select id="kenya_sign_language" name="kenya_sign_language" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="music" class="form-label">Music:</label>
+                                    <select id="music" name="music" class="form-select">
+                                        <option value="">Select Grade</option>
+                                        <option value="A">A (12 points)</option>
+                                        <option value="A-">A- (11 points)</option>
+                                        <option value="B+">B+ (10 points)</option>
+                                        <option value="B">B (9 points)</option>
+                                        <option value="B-">B- (8 points)</option>
+                                        <option value="C+">C+ (7 points)</option>
+                                        <option value="C">C (6 points)</option>
+                                        <option value="C-">C- (5 points)</option>
+                                        <option value="D+">D+ (4 points)</option>
+                                        <option value="D">D (3 points)</option>
+                                        <option value="D-">D- (2 points)</option>
+                                        <option value="E">E (1 point)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-5 mb-4">
+                        <button type="submit" class="btn btn-calculate me-3" id="calculateBtn">
+                            <i class="fas fa-calculator me-2"></i> Calculate Cluster Points
+                        </button>
+                        <button type="button" class="btn btn-reset" onclick="resetForm()">
+                            <i class="fas fa-redo me-2"></i> Reset Form
+                        </button>
                     </div>
                 </form>
                 
+                <!-- Results Section -->
                 <div id="resultsSection" class="results-container" style="display: none;">
+                    <!-- Step Indicator -->
                     <div class="step-indicator">
-                        <div class="step completed"><div class="step-number">1</div><span class="step-label">Grades</span><div class="step-line"></div></div>
-                        <div class="step completed"><div class="step-number">2</div><span class="step-label">Details</span><div class="step-line"></div></div>
-                        <div class="step completed"><div class="step-number">3</div><span class="step-label">Payment</span><div class="step-line"></div></div>
-                        <div class="step active"><div class="step-number">4</div><span class="step-label">Results</span></div>
-                    </div>
-                    
-                    <h3 class="results-title">Your Cluster Points Results</h3>
-                    
-                    <div class="alert alert-success mb-4">
-                        <div class="row">
-                            <div class="col-md-6"><strong>Calculation Summary</strong><div id="aggregateDisplay"></div></div>
-                            <div class="col-md-6"><strong>Important Note</strong><div class="small">All cluster points have a -3 deviation applied. Click any card for details.</div></div>
+                        <div class="step completed">
+                            <div class="step-number">1</div>
+                            <span class="step-label">Grades</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step completed">
+                            <div class="step-number">2</div>
+                            <span class="step-label">Details</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step completed">
+                            <div class="step-number">3</div>
+                            <span class="step-label">Payment</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step active">
+                            <div class="step-number">4</div>
+                            <span class="step-label">Results</span>
                         </div>
                     </div>
                     
-                    <div class="sort-buttons">
-                        <button class="sort-btn active" onclick="sortClusters('number')">Sort by Number</button>
-                        <button class="sort-btn" onclick="sortClusters('points')">Sort by Points</button>
-                        <button class="sort-btn" onclick="sortClusters('non-zero')">Show Non-Zero Only</button>
+                    <h3 class="results-title"><i class="fas fa-chart-bar me-2" style="color: var(--kuccps-yellow);"></i> Step 4: Your Cluster Points Results</h3>
+                    
+                    <!-- Summary Alert -->
+                    <div class="alert alert-success mb-4" id="summaryAlert">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong><i class="fas fa-info-circle me-2"></i>Calculation Summary</strong>
+                                <div id="aggregateDisplay" class="mt-2"></div>
+                                <div id="userInfoDisplay" class="mt-2 small"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <strong><i class="fas fa-exclamation-triangle me-2"></i>Important Note</strong>
+                                <div class="small mt-2">
+                                    All cluster points have a <strong>-3 deviation</strong> applied as per KUCCPS policy. 
+                                    Click on any cluster card for detailed subject breakdown.
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="cluster-grid" id="clusterGrid"></div>
+                    <!-- Sort Buttons -->
+                    <div class="sort-buttons mb-4">
+                        <button class="sort-btn active" onclick="sortClusters('number')">
+                            <i class="fas fa-sort-numeric-down me-1"></i> Sort by Cluster Number
+                        </button>
+                        <button class="sort-btn" onclick="sortClusters('points')">
+                            <i class="fas fa-sort-amount-down me-1"></i> Sort by Points
+                        </button>
+                        <button class="sort-btn" onclick="sortClusters('non-zero')">
+                            <i class="fas fa-filter me-1"></i> Show Non-Zero Only
+                        </button>
+                    </div>
                     
+                    <!-- Cluster Points Grid Display -->
+                    <div class="cluster-grid" id="clusterGrid">
+                        <!-- Cluster cards will be populated here -->
+                    </div>
+                    
+                    <!-- Top Clusters -->
+                    <div id="topClustersSection" style="display: none;">
+                        <h5 class="mt-4 mb-3" style="color: var(--kuccps-red);">
+                            <i class="fas fa-trophy me-2"></i> Your Best Clusters
+                        </h5>
+                        <div class="cluster-grid" id="topClustersGrid">
+                            <!-- Top 3 clusters will be shown here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Download Results -->
                     <div class="text-center mt-4">
-                        <button class="btn btn-outline-primary" onclick="window.location.reload()">Calculate Again</button>
+                        <button class="btn btn-outline-primary" onclick="downloadResults()">
+                            <i class="fas fa-download me-2"></i> Download Results as PDF
+                        </button>
+                        <button class="btn btn-outline-success ms-2" onclick="window.location.reload()">
+                            <i class="fas fa-redo me-2"></i> Calculate Again
+                        </button>
                     </div>
                 </div>
             </div>
             
             <div class="card-footer text-center py-3">
-                <small>KCSE Cluster Points Calculator © 2026 | Based on KUCCPS Requirements</small>
+                <small style="color: var(--kuccps-medium-grey);">
+                    <i class="fas fa-university me-1"></i> 
+                    KCSE Cluster Points Calculator © 2026 | Based on Official KUCCPS University Admission Requirements
+                </small>
             </div>
         </div>
     </div>
 
+    <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Global variables
-        let paymentCheckInterval = null;
-        let checkoutRequestId = null;
-        let userData = null;
-        let currentGrades = null;
-        let manualPaymentData = { hasManualPayment: false };
-        
-        // Helper Functions
-        function showLoading(show, text = 'Processing...') {
-            const spinner = document.getElementById('loadingSpinner');
-            const loadingText = document.getElementById('loadingText');
-            loadingText.textContent = text;
-            spinner.style.display = show ? 'flex' : 'none';
-        }
-        
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `alert alert-${type} alert-dismissible fade show`;
-            notification.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-            document.querySelector('.card-body').insertBefore(notification, document.querySelector('.card-body').firstChild);
-            setTimeout(() => notification.remove(), 5000);
-        }
-        
-        function updateStepIndicator(step) {
-            for (let i = 1; i <= 4; i++) {
-                const el = document.getElementById(`step${i}`);
-                if (el) {
-                    el.classList.remove('active', 'completed');
-                    if (i < step) el.classList.add('completed');
-                    else if (i === step) el.classList.add('active');
-                }
-            }
-        }
-        
-        function resetForm() {
-            document.getElementById('gradesForm').reset();
-            document.getElementById('resultsSection').style.display = 'none';
-            sessionStorage.removeItem('grades');
-        }
-        
-        function showRetrieveModal() {
-            new bootstrap.Modal(document.getElementById('retrieveModal')).show();
-        }
-        
-        function showUserDetailsModal() {
-            document.getElementById('userDetailsForm').reset();
-            document.getElementById('manualPaymentIndicator').style.display = 'none';
-            const btn = document.getElementById('continueToPaymentBtn');
-            btn.innerHTML = '<i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)';
-            btn.classList.remove('btn-manual');
-            btn.classList.add('btn-register');
-            new bootstrap.Modal(document.getElementById('userDetailsModal')).show();
-        }
-        
-        // Manual payment check
-        async function checkManualPayment(identifier) {
-            if (!identifier || identifier.length < 5) return;
-            try {
-                const res = await fetch('/admin/api/check-manual-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ identifier })
-                });
-                const data = await res.json();
-                if (data.success && data.has_manual_payment) {
-                    manualPaymentData = { hasManualPayment: true, user_id: data.user_id };
-                    document.getElementById('manualPaymentIndicator').style.display = 'block';
-                    document.getElementById('manualPaymentBanner').style.display = 'block';
-                    document.getElementById('manualPaymentMessage').innerHTML = `Manual payment found for <strong>${identifier}</strong>. You can proceed directly to calculation.`;
-                    const btn = document.getElementById('continueToPaymentBtn');
-                    btn.innerHTML = '<i class="fas fa-calculator me-2"></i> Proceed to Calculation (Manual Payment)';
-                    btn.classList.remove('btn-register');
-                    btn.classList.add('btn-manual');
-                }
-            } catch(e) { console.error('Manual payment check error:', e); }
-        }
-        
-        // Grades form submission
-        document.getElementById('gradesForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const grades = {};
-            document.querySelectorAll('#gradesForm select').forEach(select => {
-                if (select.value && select.value !== 'Select Grade') grades[select.id] = select.value.toUpperCase();
+    // Global variables
+    let paymentCheckInterval = null;
+    let checkoutRequestId = null;
+    let userData = null;
+    let hasPaid = false;
+    let currentGrades = null;
+    let manualPaymentData = {
+        hasManualPayment: false,
+        user_id: null,
+        kcse_index: null,
+        email: null
+    };
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        checkPaymentStatusOnLoad();
+        updateUI();
+    });
+
+    // Check if user has already paid when page loads
+    async function checkPaymentStatusOnLoad() {
+        try {
+            const response = await fetch('/my_results', {
+                credentials: 'same-origin'
             });
             
-            if (!grades.mathematics || !grades.english) {
-                showNotification('Mathematics and English are required', 'warning');
-                return;
-            }
-            if (Object.keys(grades).length < 7) {
-                showNotification(`Please enter at least 7 subjects (you have ${Object.keys(grades).length})`, 'warning');
-                return;
-            }
+            const data = await response.json();
             
-            sessionStorage.setItem('grades', JSON.stringify(grades));
-            currentGrades = grades;
-            updateStepIndicator(2);
-            showUserDetailsModal();
-        });
+            if (data.success && data.payment_status === 'completed') {
+                hasPaid = true;
+                showUserStatusBar(data);
+            } else {
+                hasPaid = false;
+            }
+        } catch (error) {
+            console.log('Not logged in or error checking status');
+            hasPaid = false;
+        }
+    }
+
+    // Show loading spinner
+    function showLoading(show = true, text = 'Loading...') {
+        const spinner = document.getElementById('loadingSpinner');
+        const loadingText = document.getElementById('loadingText');
+        loadingText.textContent = text;
+        spinner.style.display = show ? 'flex' : 'none';
+    }
+
+    // Reset form
+    function resetForm() {
+        document.getElementById('gradesForm').reset();
+        document.getElementById('resultsSection').style.display = 'none';
+        currentGrades = null;
+    }
+
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
         
-        // User details form submission
-        document.getElementById('userDetailsForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const btn = document.getElementById('continueToPaymentBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
-            
+        // Insert at the top of the card body
+        const cardBody = document.querySelector('.card-body');
+        cardBody.insertBefore(notification, cardBody.firstChild);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // Show user details modal (Step 2)
+    function showUserDetailsModal() {
+        const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
+        modal.show();
+        
+        // Clear previous entries
+        document.getElementById('user_kcse_index').value = '';
+        document.getElementById('user_email').value = '';
+        document.getElementById('user_phone_number').value = '';
+        
+        // Hide manual payment indicator
+        document.getElementById('manualPaymentIndicator').style.display = 'none';
+        document.getElementById('manualPaymentNote').style.display = 'none';
+        
+        // Reset button text
+        const continueBtn = document.getElementById('continueToPaymentBtn');
+        continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)';
+        continueBtn.classList.remove('btn-manual');
+        continueBtn.classList.add('btn-register');
+    }
+
+    // Show payment modal (Step 3)
+    function showPaymentModal() {
+        const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        modal.show();
+        
+        // Start payment process
+        startPaymentProcess();
+    }
+
+    // Start payment process
+    async function startPaymentProcess() {
+        const paymentStatusText = document.getElementById('paymentStatusText');
+        const paymentInstructions = document.getElementById('paymentInstructions');
+        const paymentSuccess = document.getElementById('paymentSuccess');
+        const paymentError = document.getElementById('paymentError');
+        
+        paymentStatusText.textContent = 'Initiating payment...';
+        paymentInstructions.textContent = 'Please wait while we process your payment...';
+        paymentSuccess.style.display = 'none';
+        paymentError.style.display = 'none';
+        
+        try {
+            // Get user details from form
             const kcseIndex = document.getElementById('user_kcse_index').value;
             const email = document.getElementById('user_email').value;
             const phoneNumber = document.getElementById('user_phone_number').value;
             
-            // Validate format
-            if (!/^\d{11}\/\d{4}$/.test(kcseIndex)) {
-                showNotification('Invalid KCSE index format', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)';
-                return;
-            }
+            // Register user and initiate payment
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    kcse_index: kcseIndex,
+                    email: email,
+                    phone_number: phoneNumber
+                })
+            });
             
-            if (manualPaymentData.hasManualPayment) {
-                // Manual payment flow
-                const modal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
-                modal.hide();
-                showLoading(true, 'Manual payment verified. Calculating results...');
+            const data = await response.json();
+            
+            if (data.success) {
+                // Close user details modal
+                const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
+                userDetailsModal.hide();
                 
-                try {
-                    const registerRes = await fetch('/register', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ kcse_index: kcseIndex, email, phone_number: phoneNumber })
-                    });
-                    const registerData = await registerRes.json();
+                // Check if this is a manual payment
+                if (data.has_manual_payment) {
+                    paymentStatusText.textContent = 'Manual Payment Verified!';
+                    paymentInstructions.textContent = 'You have a manual payment. Redirecting to calculation...';
                     
-                    if (registerData.success) {
-                        userData = { kcse_index: kcseIndex, email, user_id: registerData.user_id, payment_method: 'manual' };
-                        const grades = JSON.parse(sessionStorage.getItem('grades'));
-                        const calcRes = await fetch('/calculate', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'same-origin',
-                            body: JSON.stringify(grades)
-                        });
-                        const calcData = await calcRes.json();
-                        if (calcData.success) {
-                            displayResults(calcData, userData);
-                            updateStepIndicator(4);
-                        } else showNotification('Calculation error', 'error');
-                    }
-                } catch(e) { showNotification('Error: ' + e.message, 'error'); }
-                finally { showLoading(false); }
-                return;
-            }
-            
-            // Normal payment flow
-            const modal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
-            modal.hide();
-            setTimeout(() => new bootstrap.Modal(document.getElementById('paymentModal')).show(), 100);
-            
-            try {
-                const res = await fetch('/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ kcse_index: kcseIndex, email, phone_number: phoneNumber })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    if (data.can_calculate) {
-                        // Already paid
-                        document.getElementById('paymentStatusText').textContent = 'Payment already verified!';
-                        document.getElementById('paymentInstructions').style.display = 'none';
-                        document.getElementById('paymentSuccess').style.display = 'block';
-                        userData = { kcse_index: kcseIndex, email, user_id: data.user_id, payment_method: 'mpesa' };
-                        setTimeout(() => {
-                            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                            calculateAfterPayment();
-                        }, 2000);
-                    } else {
-                        checkoutRequestId = data.checkout_request_id;
-                        userData = { kcse_index: kcseIndex, email, user_id: data.user_id, checkout_request_id: data.checkout_request_id };
-                        document.getElementById('paymentStatusText').textContent = 'Check your phone for STK Push...';
-                        document.getElementById('paymentInstructions').textContent = 'Enter your M-Pesa PIN to complete payment.';
-                        startPaymentPolling();
-                    }
-                } else {
-                    throw new Error(data.error || 'Registration failed');
-                }
-            } catch(e) {
-                document.getElementById('paymentStatusText').textContent = 'Payment failed';
-                document.getElementById('paymentInstructions').style.display = 'none';
-                document.getElementById('paymentError').style.display = 'block';
-                document.getElementById('errorMessage').textContent = e.message;
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)';
-            }
-        });
-        
-        function startPaymentPolling() {
-            let attempts = 0;
-            paymentCheckInterval = setInterval(async () => {
-                attempts++;
-                if (attempts > 100) { // 5 minutes max
-                    clearInterval(paymentCheckInterval);
-                    document.getElementById('paymentStatusText').textContent = 'Payment timeout';
-                    document.getElementById('paymentInstructions').style.display = 'none';
-                    document.getElementById('paymentError').style.display = 'block';
-                    document.getElementById('errorMessage').textContent = 'Payment took too long. Please try again.';
+                    // Store user data
+                    userData = {
+                        kcse_index: kcseIndex,
+                        email: email,
+                        user_id: data.user_id,
+                        payment_method: 'manual'
+                    };
+                    
+                    // Calculate points after 2 seconds
+                    setTimeout(() => {
+                        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                        paymentModal.hide();
+                        calculatePointsAfterPayment();
+                    }, 2000);
                     return;
                 }
                 
-                try {
-                    const res = await fetch(`/check_payment/${checkoutRequestId}`, { credentials: 'same-origin' });
-                    const data = await res.json();
-                    if (data.success && data.status === 'completed') {
-                        clearInterval(paymentCheckInterval);
-                        document.getElementById('paymentStatusText').textContent = 'Payment Successful!';
-                        document.getElementById('paymentInstructions').style.display = 'none';
-                        document.getElementById('paymentSuccess').style.display = 'block';
+                // If local test mode, simulate payment and calculate
+                if (data.local_test_mode) {
+                    paymentStatusText.textContent = 'Local Test Mode - Simulating Payment';
+                    
+                    // Simulate payment success after 2 seconds
+                    setTimeout(async () => {
+                        paymentStatusText.textContent = 'Payment Successful!';
+                        paymentInstructions.style.display = 'none';
+                        paymentSuccess.style.display = 'block';
+                        
+                        // Store user data
+                        userData = {
+                            kcse_index: kcseIndex,
+                            email: email,
+                            user_id: data.user_id,
+                            payment_method: 'simulated'
+                        };
+                        
+                        // Calculate points after payment
                         setTimeout(() => {
-                            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                            calculateAfterPayment();
+                            const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                            paymentModal.hide();
+                            calculatePointsAfterPayment();
                         }, 2000);
-                    }
-                } catch(e) { console.error('Polling error:', e); }
-            }, 3000);
+                    }, 2000);
+                    return;
+                }
+                
+                // For production: Start checking payment status
+                checkoutRequestId = data.checkout_request_id;
+                paymentStatusText.textContent = 'Payment initiated. Please check your phone...';
+                paymentInstructions.textContent = 'Check your phone for STK Push notification and enter your M-Pesa PIN.';
+                
+                // Store user data for later use
+                userData = {
+                    kcse_index: kcseIndex,
+                    email: email,
+                    user_id: data.user_id,
+                    checkout_request_id: data.checkout_request_id,
+                    payment_method: 'mpesa'
+                };
+                
+                // Start checking payment status
+                checkPaymentStatus();
+            } else {
+                paymentStatusText.textContent = 'Registration Failed';
+                paymentInstructions.style.display = 'none';
+                paymentError.style.display = 'block';
+                document.getElementById('errorMessage').textContent = data.error || 'Registration failed. Please try again.';
+            }
+        } catch (error) {
+            paymentStatusText.textContent = 'Network Error';
+            paymentInstructions.style.display = 'none';
+            paymentError.style.display = 'block';
+            document.getElementById('errorMessage').textContent = error.message;
         }
+    }
+
+    // Check payment status
+    async function checkPaymentStatus() {
+        if (!checkoutRequestId) return;
         
-        async function calculateAfterPayment() {
-            showLoading(true, 'Calculating your cluster points...');
+        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+        const paymentStatusText = document.getElementById('paymentStatusText');
+        const paymentInstructions = document.getElementById('paymentInstructions');
+        const paymentSuccess = document.getElementById('paymentSuccess');
+        const paymentError = document.getElementById('paymentError');
+        
+        paymentCheckInterval = setInterval(async () => {
             try {
-                const grades = JSON.parse(sessionStorage.getItem('grades'));
-                const res = await fetch('/calculate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify(grades)
+                const response = await fetch(`/check_payment/${checkoutRequestId}`, {
+                    credentials: 'same-origin'
                 });
-                const data = await res.json();
+                
+                const data = await response.json();
+                
                 if (data.success) {
-                    displayResults(data, userData);
-                    updateStepIndicator(4);
-                    showNotification('Results calculated successfully!', 'success');
-                } else throw new Error(data.error || 'Calculation failed');
-            } catch(e) {
-                showNotification('Error: ' + e.message, 'error');
-            } finally {
-                showLoading(false);
+                    if (data.status === 'completed') {
+                        clearInterval(paymentCheckInterval);
+                        
+                        // Update payment modal
+                        paymentStatusText.textContent = 'Payment Successful!';
+                        paymentInstructions.style.display = 'none';
+                        paymentSuccess.style.display = 'block';
+                        
+                        // Calculate points after payment
+                        setTimeout(() => {
+                            paymentModal.hide();
+                            calculatePointsAfterPayment();
+                        }, 2000);
+                        
+                    } else if (data.status === 'failed') {
+                        clearInterval(paymentCheckInterval);
+                        paymentStatusText.textContent = 'Payment Failed';
+                        paymentInstructions.style.display = 'none';
+                        paymentError.style.display = 'block';
+                        document.getElementById('errorMessage').textContent = data.error || 'Payment failed. Please try again.';
+                    } else {
+                        // Still pending
+                        paymentInstructions.textContent = 'Please check your phone and enter your M-Pesa PIN to complete payment...';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking payment:', error);
             }
-        }
+        }, 3000); // Check every 3 seconds
         
-        function displayResults(data, userInfo) {
-            const resultsSection = document.getElementById('resultsSection');
-            const clusterGrid = document.getElementById('clusterGrid');
-            const aggregateDisplay = document.getElementById('aggregateDisplay');
+        // Stop checking after 5 minutes
+        setTimeout(() => {
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+                paymentStatusText.textContent = 'Payment Timeout';
+                paymentInstructions.textContent = 'Payment timed out. Please try again.';
+            }
+        }, 300000); // 5 minutes
+    }
+
+    // Calculate points after payment
+    async function calculatePointsAfterPayment() {
+        showLoading(true, 'Calculating your cluster points...');
+        
+        try {
+            // Get grades from sessionStorage
+            const grades = JSON.parse(sessionStorage.getItem('grades'));
             
-            resultsSection.style.display = 'block';
-            aggregateDisplay.innerHTML = `
-                <div>Aggregate Points (y): <strong>${data.aggregate_points || 0} / 84</strong></div>
-                <div>Top 7 Subjects: ${(data.top_7_subjects || []).map(s => `${s.subject}: ${s.points}`).join(', ')}</div>
-            `;
+            console.log('📊 Sending grades for calculation:', grades);
             
-            clusterGrid.innerHTML = '';
-            const clusters = [];
-            for (let i = 1; i <= 20; i++) {
-                const points = data.results?.[`Cluster ${i}`] || '0.000';
-                clusters.push({
-                    id: i,
-                    points: parseFloat(points),
-                    pointsFormatted: points,
-                    description: getClusterDesc(i),
-                    subjectsUsed: data.details?.[`Cluster ${i}`]?.subjects_used || []
-                });
+            if (!grades) {
+                showNotification('No grades found. Please enter your grades first.', 'error');
+                showLoading(false);
+                return;
             }
             
-            clusters.forEach(cluster => {
-                const pointsClass = cluster.points >= 30 ? 'points-high' : (cluster.points > 0 ? 'points-medium' : 'points-zero');
-                const card = document.createElement('div');
-                card.className = `cluster-card ${cluster.points === 0 ? 'zero' : (cluster.points >= 30 ? 'highlight' : '')}`;
-                card.onclick = () => showClusterDetails(cluster.id, `Cluster ${cluster.id}`, cluster.pointsFormatted, cluster.subjectsUsed);
-                card.innerHTML = `
-                    <div class="cluster-header"><div class="cluster-number">${cluster.id}</div><div class="cluster-points"><span class="${pointsClass}">${cluster.pointsFormatted}</span></div></div>
-                    <div class="cluster-name">Cluster ${cluster.id}</div>
-                    <div class="cluster-description">${cluster.description}</div>
-                    ${cluster.points > 0 ? '<small>Click for details</small>' : '<small class="text-danger">Requirements not met</small>'}
-                `;
-                clusterGrid.appendChild(card);
+            // Send grades for calculation
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(grades)
             });
             
-            resultsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function getClusterDesc(id) {
-            const desc = {1:'Law',2:'Business',3:'Social Sciences',4:'Geosciences',5:'Engineering',6:'Architecture',7:'Computing',8:'Agribusiness',9:'General Sciences',10:'Actuarial Science',11:'Interior Design',12:'Sport Science',13:'Medicine',14:'History',15:'Agriculture',16:'Geography',17:'Languages',18:'Music & Arts',19:'Education',20:'Religious Studies'};
-            return desc[id] || `Cluster ${id}`;
-        }
-        
-        function showClusterDetails(clusterId, name, points, subjectsUsed) {
-            const modal = new bootstrap.Modal(document.getElementById('clusterDetailsModal'));
-            const content = document.getElementById('modalContent');
-            document.getElementById('modalTitle').textContent = name;
-            let html = `<h5>${name}</h5><p>Points: <strong>${points}</strong></p>`;
-            if (subjectsUsed && subjectsUsed.length) {
-                html += '<h6>Subjects Used:</h6><div class="subject-details">';
-                subjectsUsed.forEach(s => {
-                    html += `<div class="subject-detail-item d-flex justify-content-between"><span>${s.subject?.toUpperCase() || 'Unknown'}</span><span>${s.grade || 'N/A'} (${s.points || 0} pts)</span></div>`;
-                });
-                html += '</div>';
-            } else html += '<div class="alert alert-warning">No subjects used for this cluster. Requirements not satisfied.</div>';
-            content.innerHTML = html;
-            modal.show();
-        }
-        
-        function sortClusters(type) {
-            const grid = document.getElementById('clusterGrid');
-            const cards = Array.from(grid.children);
-            const activeBtn = event.target;
-            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
-            activeBtn.classList.add('active');
+            const data = await response.json();
+            console.log('📈 Calculation response:', data);
             
-            cards.sort((a, b) => {
-                const aNum = parseInt(a.querySelector('.cluster-number').textContent);
-                const bNum = parseInt(b.querySelector('.cluster-number').textContent);
-                const aPoints = parseFloat(a.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
-                const bPoints = parseFloat(b.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') || 0);
-                if (type === 'number') return aNum - bNum;
-                if (type === 'points') return bPoints - aPoints;
-                if (type === 'non-zero') {
+            if (data.success) {
+                // Display results
+                displayResults(data, userData);
+                
+                // Show success message
+                const paymentMethod = userData?.payment_method || 'mpesa';
+                const message = paymentMethod === 'manual' 
+                    ? `Results calculated for ${userData.kcse_index} (Manual Payment)` 
+                    : `Results calculated for ${userData.kcse_index}`;
+                showNotification(message, 'success');
+                
+                // Update step indicator
+                updateStepIndicator(4);
+            } else {
+                if (data.error && (data.error.includes('Payment required') || data.error.includes('Registration required'))) {
+                    showNotification('Payment verification failed. Please try again.', 'error');
+                    showUserDetailsModal();
+                } else {
+                    showNotification('Error calculating points: ' + (data.error || 'Unknown error'), 'error');
+                }
+            }
+        } catch (error) {
+            showNotification('Network error: ' + error.message, 'error');
+            console.error('Error:', error);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // Format cluster points with color coding
+    function formatClusterPoints(points) {
+        if (points === undefined || points === null) {
+            return '<span class="points-zero">0.000</span>';
+        }
+        
+        const num = parseFloat(points);
+        if (isNaN(num)) {
+            return '<span class="points-zero">0.000</span>';
+        }
+        
+        if (num >= 30) return '<span class="points-high">' + num.toFixed(3) + '</span>';
+        if (num >= 15) return '<span class="points-medium">' + num.toFixed(3) + '</span>';
+        if (num > 0) return num.toFixed(3);
+        return '<span class="points-zero">0.000</span>';
+    }
+
+    // Show cluster details modal
+    function showClusterDetails(clusterId, clusterName, points, subjectsUsed) {
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        
+        modalTitle.textContent = `${clusterName} Details`;
+        
+        let html = `
+            <div class="mb-3">
+                <h5>${clusterName}</h5>
+                <p>Cluster Points: <strong>${points}</strong></p>
+                <p class="text-muted">Formula: √((x/48) × (y/84)) × 48 - 3</p>
+            </div>
+        `;
+        
+        if (subjectsUsed && subjectsUsed.length > 0) {
+            html += `<h6 class="mb-3"><i class="fas fa-book"></i> Subjects Used:</h6>
+            <div class="subject-details">`;
+            
+            let totalPoints = 0;
+            subjectsUsed.forEach((subject, index) => {
+                const subjectName = subject.subject || subject.name || 'Unknown';
+                const grade = subject.grade || 'E';
+                const points = subject.points || 0;
+                const requirement = subject.requirement || '';
+                
+                const gradeClass = `grade-${grade ? grade.charAt(0) : 'E'}`;
+                html += `<div class="subject-detail-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="subject-grade">${subjectName.replace('_', ' ').toUpperCase()}</span>
+                            <span class="badge ${gradeClass} subject-badge">${grade}</span>
+                            ${requirement ? `<span class="requirement-badge">${requirement}</span>` : ''}
+                        </div>
+                        <div class="subject-points">${points} points</div>
+                    </div>
+                </div>`;
+                totalPoints += points;
+            });
+            
+            html += `</div>
+            <div class="mt-3 p-3 bg-light rounded">
+                <strong>Total Cluster Subjects Points (x):</strong> ${totalPoints} / 48
+                <br>
+                <small class="text-muted">x = sum of 4 unique cluster subjects used</small>
+            </div>`;
+        } else {
+            html += `<div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No subjects used for this cluster. This could be because:
+                <ul class="mb-0 mt-2">
+                    <li>Required subjects not available in your grades</li>
+                    <li>Subjects don't meet minimum requirements</li>
+                    <li>Cluster requirements not satisfied</li>
+                </ul>
+            </div>`;
+        }
+        
+        modalContent.innerHTML = html;
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('clusterDetailsModal'));
+        modal.show();
+    }
+
+    // Display results
+    function displayResults(data, userInfo) {
+        console.log('🎯 Displaying results with data:', data);
+        console.log('👤 User info:', userInfo);
+        
+        const resultsSection = document.getElementById('resultsSection');
+        const clusterGrid = document.getElementById('clusterGrid');
+        const aggregateDisplay = document.getElementById('aggregateDisplay');
+        const userInfoDisplay = document.getElementById('userInfoDisplay');
+        const topClustersSection = document.getElementById('topClustersSection');
+        const topClustersGrid = document.getElementById('topClustersGrid');
+        
+        // Show results section
+        resultsSection.style.display = 'block';
+        
+        // Display user info
+        if (userInfo) {
+            const paymentMethod = userInfo.payment_method || 'mpesa';
+            const paymentBadge = paymentMethod === 'manual' 
+                ? '<span class="badge" style="background: var(--kuccps-purple);">Manual Payment ✓</span>'
+                : '<span class="badge bg-success">M-Pesa Verified ✓</span>';
+            
+            userInfoDisplay.innerHTML = `
+                <div>KCSE Index: <strong>${userInfo.kcse_index || 'N/A'}</strong> ${paymentMethod === 'manual' ? '<span class="manual-payment-badge">Manual</span>' : ''}</div>
+                <div>Email: <strong>${userInfo.email || 'N/A'}</strong></div>
+                <div>Payment: ${paymentBadge}</div>
+            `;
+        }
+        
+        // Display aggregate points
+        if (data.aggregate_points !== undefined) {
+            aggregateDisplay.innerHTML = `
+                <div>Aggregate Points (y): <strong>${data.aggregate_points} / 84</strong></div>
+                <div>Top 7 Subjects: ${data.top_7_subjects ? data.top_7_subjects.map(s => {
+                    const subjectName = s.subject ? s.subject.replace('_', ' ') : '';
+                    return `${subjectName} (${s.points})`;
+                }).join(', ') : 'None'}</div>
+            `;
+        } else {
+            aggregateDisplay.innerHTML = '<div>Aggregate points not available</div>';
+        }
+        
+        // Clear previous results
+        clusterGrid.innerHTML = '';
+        topClustersGrid.innerHTML = '';
+        
+        // Prepare clusters data
+        const clusters = [];
+        
+        // Check if we have results in the expected format
+        if (data.results && typeof data.results === 'object') {
+            // Format 1: results is an object with Cluster 1, Cluster 2, etc.
+            for (let i = 1; i <= 20; i++) {
+                const clusterKey = `Cluster ${i}`;
+                const pointsValue = data.results[clusterKey];
+                
+                if (pointsValue !== undefined) {
+                    const points = parseFloat(pointsValue);
+                    clusters.push({
+                        id: i,
+                        name: clusterKey,
+                        points: isNaN(points) ? 0 : points,
+                        pointsFormatted: isNaN(points) ? '0.000' : points.toFixed(3),
+                        description: getClusterDescription(i),
+                        subjectsUsed: data.details && data.details[clusterKey] ? data.details[clusterKey].subjects_used : []
+                    });
+                } else {
+                    // If no result for this cluster, add with 0 points
+                    clusters.push({
+                        id: i,
+                        name: clusterKey,
+                        points: 0,
+                        pointsFormatted: '0.000',
+                        description: getClusterDescription(i),
+                        subjectsUsed: []
+                    });
+                }
+            }
+        } else {
+            // If no results object, create empty clusters
+            for (let i = 1; i <= 20; i++) {
+                clusters.push({
+                    id: i,
+                    name: `Cluster ${i}`,
+                    points: 0,
+                    pointsFormatted: '0.000',
+                    description: getClusterDescription(i),
+                    subjectsUsed: []
+                });
+            }
+        }
+        
+        // Sort by points descending
+        const sortedByPoints = [...clusters].sort((a, b) => b.points - a.points);
+        
+        // Get top 3 clusters (non-zero)
+        const topClusters = sortedByPoints.filter(c => c.points > 0).slice(0, 3);
+        
+        // Display all clusters
+        clusters.forEach((cluster) => {
+            const cardClass = cluster.points === 0 ? 'zero' : (cluster.points >= 30 ? 'highlight' : '');
+            const pointsDisplay = formatClusterPoints(cluster.pointsFormatted);
+            
+            const clusterCard = document.createElement('div');
+            clusterCard.className = `cluster-card ${cardClass}`;
+            clusterCard.onclick = () => {
+                showClusterDetails(
+                    cluster.id,
+                    cluster.name,
+                    cluster.pointsFormatted,
+                    cluster.subjectsUsed
+                );
+            };
+            
+            clusterCard.innerHTML = `
+                <div class="cluster-header">
+                    <div class="cluster-number">${cluster.id}</div>
+                    <div class="cluster-points">${pointsDisplay}</div>
+                </div>
+                <div class="cluster-name">${cluster.name}</div>
+                <div class="cluster-description">${cluster.description}</div>
+                ${cluster.points > 0 ? '<small class="text-muted">Click for details</small>' : '<small class="text-danger">No points - requirements not met</small>'}
+            `;
+            
+            clusterGrid.appendChild(clusterCard);
+        });
+        
+        // Display top clusters if any
+        if (topClusters.length > 0) {
+            topClustersSection.style.display = 'block';
+            topClusters.forEach((cluster, index) => {
+                const pointsDisplay = formatClusterPoints(cluster.pointsFormatted);
+                
+                const clusterCard = document.createElement('div');
+                clusterCard.className = 'cluster-card highlight';
+                clusterCard.onclick = () => {
+                    showClusterDetails(
+                        cluster.id,
+                        cluster.name,
+                        cluster.pointsFormatted,
+                        cluster.subjectsUsed
+                    );
+                };
+                
+                const rank = index + 1;
+                
+                clusterCard.innerHTML = `
+                    <div class="cluster-header">
+                        <div class="cluster-number">${cluster.id}</div>
+                        <div class="cluster-points">${pointsDisplay}</div>
+                    </div>
+                    <div class="cluster-name">${cluster.name}</div>
+                    <div class="cluster-description">${cluster.description}</div>
+                    <div class="text-center mt-2">
+                        <span class="badge bg-success"><i class="fas fa-trophy me-1"></i> Top ${rank}</span>
+                    </div>
+                `;
+                
+                topClustersGrid.appendChild(clusterCard);
+            });
+        } else {
+            topClustersSection.style.display = 'none';
+        }
+        
+        // Scroll to results
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Helper function to get cluster description
+    function getClusterDescription(clusterId) {
+        const descriptions = {
+            1: 'Law',
+            2: 'Business and Hospitality',
+            3: 'Social Sciences & Arts',
+            4: 'Geosciences',
+            5: 'Engineering, Technology',
+            6: 'Architecture, Building',
+            7: 'Computing, IT',
+            8: 'Agribusiness',
+            9: 'General Sciences',
+            10: 'Actuarial Science',
+            11: 'Interior Design',
+            12: 'Sport Science',
+            13: 'Medicine',
+            14: 'History',
+            15: 'Agriculture',
+            16: 'Geography Focus',
+            17: 'French & German',
+            18: 'Music & Arts',
+            19: 'Education Related',
+            20: 'Religious Studies'
+        };
+        return descriptions[clusterId] || `Cluster ${clusterId}`;
+    }
+
+    // Sort clusters
+    function sortClusters(sortType) {
+        const clusterGrid = document.getElementById('clusterGrid');
+        const clusters = Array.from(clusterGrid.getElementsByClassName('cluster-card'));
+        const sortButtons = document.querySelectorAll('.sort-btn');
+        
+        // Update active button
+        sortButtons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        clusters.sort((a, b) => {
+            const aId = parseInt(a.querySelector('.cluster-number').textContent);
+            const bId = parseInt(b.querySelector('.cluster-number').textContent);
+            
+            // Extract points from HTML (handles span tags)
+            const aPointsText = a.querySelector('.cluster-points').textContent;
+            const bPointsText = b.querySelector('.cluster-points').textContent;
+            
+            const aPoints = parseFloat(aPointsText.replace(/[^\d.]/g, '') || 0);
+            const bPoints = parseFloat(bPointsText.replace(/[^\d.]/g, '') || 0);
+            
+            switch (sortType) {
+                case 'number':
+                    return aId - bId;
+                case 'points':
+                    return bPoints - aPoints;
+                case 'non-zero':
                     if (aPoints === 0 && bPoints > 0) return 1;
                     if (aPoints > 0 && bPoints === 0) return -1;
                     return bPoints - aPoints;
-                }
-                return 0;
+                default:
+                    return aId - bId;
+            }
+        });
+        
+        // Reorder clusters
+        clusters.forEach(cluster => clusterGrid.appendChild(cluster));
+        
+        // For non-zero filter, hide/show
+        if (sortType === 'non-zero') {
+            clusters.forEach(cluster => {
+                const pointsText = cluster.querySelector('.cluster-points').textContent;
+                const points = parseFloat(pointsText.replace(/[^\d.]/g, '') || 0);
+                cluster.style.display = points === 0 ? 'none' : 'block';
             });
+        } else {
+            clusters.forEach(cluster => cluster.style.display = 'block');
+        }
+    }
+
+    // Update step indicator
+    function updateStepIndicator(step) {
+        for (let i = 1; i <= 4; i++) {
+            const stepEl = document.getElementById(`step${i}`);
+            if (stepEl) {
+                stepEl.classList.remove('active', 'completed');
+                if (i < step) {
+                    stepEl.classList.add('completed');
+                } else if (i === step) {
+                    stepEl.classList.add('active');
+                }
+            }
+        }
+    }
+
+    // Show retrieve modal
+    function showRetrieveModal() {
+        const modal = new bootstrap.Modal(document.getElementById('retrieveModal'));
+        modal.show();
+    }
+
+    // Update UI based on user status
+    function updateUI() {
+        const calculateBtn = document.getElementById('calculateBtn');
+        calculateBtn.disabled = false;
+    }
+
+    // ===== UPDATED: Handle user details form submission with manual payment fix =====
+    document.getElementById('userDetailsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const continueBtn = document.getElementById('continueToPaymentBtn');
+        const originalText = continueBtn.innerHTML;
+        continueBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+        continueBtn.disabled = true;
+        
+        try {
+            // Validate KCSE index format
+            const kcseIndex = document.getElementById('user_kcse_index').value;
+            const indexPattern = /^\d{11}\/\d{4}$/;
             
-            cards.forEach(card => grid.appendChild(card));
-            if (type === 'non-zero') cards.forEach(card => card.style.display = card.querySelector('.cluster-points').textContent.replace(/[^\d.]/g, '') === '0' ? 'none' : 'block');
-            else cards.forEach(card => card.style.display = 'block');
+            if (!indexPattern.test(kcseIndex)) {
+                showNotification('Invalid KCSE index format. Please use: 12345678912/2024', 'error');
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                return;
+            }
+            
+            // Validate email
+            const email = document.getElementById('user_email').value;
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!emailPattern.test(email)) {
+                showNotification('Please enter a valid email address', 'error');
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                return;
+            }
+            
+            // Validate phone number
+            const phoneNumber = document.getElementById('user_phone_number').value;
+            const phonePattern = /^(07\d{8}|2547\d{8}|01\d{8})$/;
+            
+            if (!phonePattern.test(phoneNumber)) {
+                showNotification('Please enter a valid Kenyan phone number (e.g., 0712345678 or 254712345678)', 'error');
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                return;
+            }
+            
+            // CHECK FOR MANUAL PAYMENT BEFORE PROCEEDING
+            if (manualPaymentData.hasManualPayment) {
+                console.log('✅ Manual payment detected, proceeding directly to calculation');
+                
+                // Close the modal
+                const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
+                userDetailsModal.hide();
+                
+                // Show loading
+                showLoading(true, 'Manual payment verified. Calculating your results...');
+                
+                try {
+                    // First register the user (this will detect manual payment on backend)
+                    const registerResponse = await fetch('/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            kcse_index: kcseIndex,
+                            email: email,
+                            phone_number: phoneNumber
+                        })
+                    });
+                    
+                    const registerData = await registerResponse.json();
+                    console.log('📝 Registration response:', registerData);
+                    
+                    if (registerData.success) {
+                        // Store user data
+                        userData = {
+                            kcse_index: kcseIndex,
+                            email: email,
+                            user_id: registerData.user_id,
+                            payment_method: 'manual'
+                        };
+                        
+                        // Get grades from sessionStorage
+                        const grades = JSON.parse(sessionStorage.getItem('grades'));
+                        
+                        if (!grades) {
+                            showNotification('No grades found. Please enter your grades first.', 'error');
+                            showLoading(false);
+                            return;
+                        }
+                        
+                        // Calculate points directly
+                        const calculateResponse = await fetch('/calculate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify(grades)
+                        });
+                        
+                        const calculateData = await calculateResponse.json();
+                        console.log('📊 Calculation response:', calculateData);
+                        
+                        if (calculateData.success) {
+                            // Display results
+                            displayResults(calculateData, userData);
+                            
+                            // Show success message
+                            showNotification(`Results calculated for ${kcseIndex} (Manual Payment)`, 'success');
+                            
+                            // Update step indicator
+                            updateStepIndicator(4);
+                        } else {
+                            showNotification('Error calculating points: ' + (calculateData.error || 'Unknown error'), 'error');
+                        }
+                    } else {
+                        showNotification(registerData.error || 'Registration failed', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotification('Network error: ' + error.message, 'error');
+                } finally {
+                    showLoading(false);
+                }
+                
+                return;
+            }
+            
+            // NORMAL PAYMENT FLOW (only if no manual payment)
+            // Close user details modal
+            const userDetailsModal = bootstrap.Modal.getInstance(document.getElementById('userDetailsModal'));
+            userDetailsModal.hide();
+            
+            // Show payment modal
+            setTimeout(() => {
+                showPaymentModal();
+            }, 500);
+            
+        } catch (error) {
+            showNotification('Error: ' + error.message, 'error');
+            continueBtn.innerHTML = originalText;
+            continueBtn.disabled = false;
+        }
+    });
+
+    // Handle grades form submission
+    document.getElementById('gradesForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Collect form data
+        const formData = new FormData(this);
+        const grades = {};
+        
+        // Convert FormData to object
+        formData.forEach((value, key) => {
+            if (value && value !== 'Select Grade') {
+                grades[key] = value.toUpperCase();
+            }
+        });
+        
+        // Check if at least Mathematics and English are filled
+        if (!grades.mathematics || !grades.english) {
+            showNotification('Please enter grades for at least Mathematics and English.', 'warning');
+            return;
         }
         
-        // Retrieve results
-        document.getElementById('retrieveForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            showLoading(true, 'Retrieving results...');
-            try {
-                const res = await fetch('/retrieve_results', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        kcse_index: document.getElementById('retrieve_kcse_index').value,
-                        mpesa_receipt: document.getElementById('mpesa_receipt').value
-                    })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('retrieveModal')).hide();
-                    displayResults(data, { kcse_index: data.kcse_index, email: data.email });
-                    updateStepIndicator(4);
-                    showNotification('Results retrieved successfully!', 'success');
-                } else showNotification(data.error || 'Results not found', 'error');
-            } catch(e) { showNotification('Error: ' + e.message, 'error'); }
-            finally { showLoading(false); }
-        });
+        // Check at least 7 subjects total
+        const subjectCount = Object.keys(grades).length;
+        if (subjectCount < 7) {
+            showNotification(`Please enter at least 7 subjects (you have ${subjectCount})`, 'warning');
+            return;
+        }
         
-        document.getElementById('retryPaymentBtn')?.addEventListener('click', () => {
-            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-            showUserDetailsModal();
-        });
+        // Save grades to sessionStorage
+        sessionStorage.setItem('grades', JSON.stringify(grades));
+        currentGrades = grades;
         
-        // Check login status on load
-        fetch('/my_results', { credentials: 'same-origin' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.payment_status === 'completed') {
-                    document.getElementById('userStatusBar').style.display = 'flex';
-                    document.getElementById('userStatusBar').innerHTML = `
-                        <span>Logged in: ${data.kcse_index} | Payment: Completed ✓</span>
-                        <button class="btn btn-sm btn-outline-light" onclick="location.reload()">New Calculation</button>
-                    `;
+        // Update step indicator
+        updateStepIndicator(2);
+        
+        // Show user details modal (Step 2)
+        showUserDetailsModal();
+    });
+
+    // Handle retrieve form submission
+    document.getElementById('retrieveForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const retrieveBtn = document.getElementById('retrieveBtn');
+        const originalText = retrieveBtn.innerHTML;
+        retrieveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Retrieving...';
+        retrieveBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/retrieve_results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    kcse_index: document.getElementById('retrieve_kcse_index').value,
+                    mpesa_receipt: document.getElementById('mpesa_receipt').value
+                })
+            });
+            
+            const data = await response.json();
+            console.log('🔍 Retrieve response:', data);
+            
+            if (data.success) {
+                // Close retrieve modal
+                const retrieveModal = bootstrap.Modal.getInstance(document.getElementById('retrieveModal'));
+                retrieveModal.hide();
+                
+                // Display retrieved results
+                userData = {
+                    kcse_index: data.kcse_index,
+                    email: data.email,
+                    payment_method: 'mpesa'
+                };
+                
+                displayResults(data, userData);
+                
+                // Show success message
+                showNotification(`Results retrieved for ${data.kcse_index}`, 'success');
+                
+                // Show results section
+                document.getElementById('resultsSection').style.display = 'block';
+                
+                // Update step indicator
+                updateStepIndicator(4);
+            } else {
+                showNotification('Error: ' + (data.error || 'Failed to retrieve results'), 'error');
+            }
+        } catch (error) {
+            showNotification('Network error: ' + error.message, 'error');
+            console.error('Retrieve error:', error);
+        } finally {
+            retrieveBtn.innerHTML = originalText;
+            retrieveBtn.disabled = false;
+        }
+    });
+
+    // Handle retry payment button
+    document.getElementById('retryPaymentBtn')?.addEventListener('click', function() {
+        showUserDetailsModal();
+        const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+        paymentModal.hide();
+    });
+
+    // Check user status
+    async function checkUserStatus() {
+        showLoading(true, 'Checking user status...');
+        try {
+            const response = await fetch('/my_results', {
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.payment_status === 'completed') {
+                    hasPaid = true;
+                    showUserStatusBar(data);
+                } else {
+                    hasPaid = false;
                 }
-            })
-            .catch(() => {});
+            }
+        } catch (error) {
+            console.error('Error checking status:', error);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // Logout user
+    async function logoutUser() {
+        showLoading(true, 'Logging out...');
+        try {
+            const response = await fetch('/logout', {
+                credentials: 'same-origin'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                hasPaid = false;
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Error logging out:', error);
+            showLoading(false);
+        }
+    }
+
+    // Show user status bar
+    function showUserStatusBar(data) {
+        const statusBar = document.getElementById('userStatusBar');
+        const statusText = document.getElementById('userStatusText');
+        
+        statusText.innerHTML = `
+            Logged in as: <strong>${data.kcse_index || 'N/A'}</strong> | 
+            Email: <strong>${data.email || 'N/A'}</strong> | 
+            Payment: <span class="badge bg-success">Completed ✓</span> |
+            Calculations: <strong>${data.calculation_count || 0}</strong>
+        `;
+        
+        statusBar.style.display = 'block';
+    }
+
+    // Download results as PDF
+    function downloadResults() {
+        showNotification('PDF download feature will be available soon. Your results are saved to your account.', 'info');
+    }
+
+    // ===== UPDATED: Manual payment check =====
+    async function checkManualPayment(identifier) {
+        if (!identifier || identifier.length < 5) return false;
+        
+        try {
+            const response = await fetch('/admin/api/check-manual-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier: identifier })
+            });
+            
+            const data = await response.json();
+            console.log('🔍 Manual payment check response:', data);
+            
+            if (data.success && data.has_manual_payment) {
+                // Show manual payment found message
+                showNotification(`✓ Manual payment found for ${identifier}! You can proceed directly to calculation.`, 'success');
+                
+                // Store manual payment data
+                manualPaymentData = {
+                    hasManualPayment: true,
+                    user_id: data.user_id,
+                    kcse_index: data.kcse_index,
+                    email: data.email
+                };
+                
+                console.log('✅ Manual payment data stored:', manualPaymentData);
+                
+                // Show manual payment indicator in modal
+                document.getElementById('manualPaymentIndicator').style.display = 'block';
+                document.getElementById('manualPaymentNote').style.display = 'inline';
+                
+                // Show manual payment banner on main page
+                const banner = document.getElementById('manualPaymentBanner');
+                document.getElementById('manualPaymentMessage').innerHTML = `A manual payment has been found for <strong>${identifier}</strong>. You can proceed directly to calculation without M-Pesa payment.`;
+                banner.style.display = 'block';
+                
+                // Update continue button
+                const continueBtn = document.getElementById('continueToPaymentBtn');
+                continueBtn.innerHTML = '<i class="fas fa-calculator me-2"></i> Proceed to Calculation (Manual Payment)';
+                continueBtn.classList.remove('btn-register');
+                continueBtn.classList.add('btn-manual');
+                
+                // Pre-fill form if empty
+                if (!document.getElementById('user_kcse_index').value && data.kcse_index) {
+                    document.getElementById('user_kcse_index').value = data.kcse_index;
+                }
+                if (!document.getElementById('user_email').value && data.email) {
+                    document.getElementById('user_email').value = data.email;
+                }
+                
+                return true;
+            } else {
+                // No manual payment found
+                manualPaymentData = {
+                    hasManualPayment: false,
+                    user_id: null,
+                    kcse_index: null,
+                    email: null
+                };
+                
+                // Hide manual payment indicators
+                document.getElementById('manualPaymentIndicator').style.display = 'none';
+                document.getElementById('manualPaymentNote').style.display = 'none';
+                document.getElementById('manualPaymentBanner').style.display = 'none';
+                
+                // Reset continue button
+                const continueBtn = document.getElementById('continueToPaymentBtn');
+                continueBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i> Continue to Payment (Ksh 100)';
+                continueBtn.classList.remove('btn-manual');
+                continueBtn.classList.add('btn-register');
+            }
+        } catch (error) {
+            console.error('Manual payment check error:', error);
+        }
+        
+        return false;
+    }
+
+    // Initialize sort buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up sort buttons
+        const sortButtons = document.querySelectorAll('.sort-btn');
+        sortButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                sortButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    });
+    
+    // Debug helper
+    function debugLog(message, data) {
+        console.log(`🔍 ${message}:`, data);
+    }
     </script>
 </body>
 </html>
