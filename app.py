@@ -1115,6 +1115,20 @@ def register():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/test-callback', methods=['GET', 'POST'])
+def test_callback():
+    """Test endpoint to verify callback connectivity"""
+    if request.method == 'POST':
+        print(f"Test callback received at {datetime.now()}")
+        print(f"Data: {request.get_json()}")
+        return jsonify({'status': 'ok', 'received': True})
+    else:
+        return jsonify({
+            'status': 'ok',
+            'message': 'Callback endpoint is reachable',
+            'time': datetime.now().isoformat(),
+            'method': 'GET'
+        })
 @app.route('/check_payment/<checkout_request_id>')
 def check_payment(checkout_request_id):
     """Check payment status"""
