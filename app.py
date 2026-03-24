@@ -41,10 +41,10 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # MongoDB Configuration
-db = None  # Initialize db variable
+db = None
 try:
     mongo_client = MongoClient(os.getenv('MONGODB_URI'), serverSelectionTimeoutMS=5000)
-    mongo_client.server_info()  # Test connection
+    mongo_client.server_info()
     db = mongo_client[os.getenv('DATABASE_NAME', 'kcse_calculator')]
     print("✅ MongoDB connected successfully!")
     users_collection = db['users']
@@ -52,7 +52,6 @@ try:
     results_collection = db['results']
     pdfs_collection = db['pdfs']
     
-    # Create indexes for better performance
     users_collection.create_index('kcse_index')
     users_collection.create_index('email')
     payments_collection.create_index('mpesa_request_id')
@@ -61,7 +60,6 @@ try:
     
 except Exception as e:
     print(f"❌ MongoDB connection failed: {e}")
-    # Create dummy collections for testing
     class DummyCollection:
         def find_one(self, *args, **kwargs):
             return None
@@ -89,37 +87,24 @@ except Exception as e:
 
 # Background thread for retrying unmatched callbacks
 def process_unmatched_callbacks():
-    """Background thread to retry processing unmatched callbacks"""
     while True:
         try:
-            time.sleep(60)  # Check every minute
-            
-            # Check if db is not None
+            time.sleep(60)
             if db is not None:
-                # Check if unmatched_callbacks collection exists
                 try:
                     unmatched = db.unmatched_callbacks.find({
                         'status': 'unmatched',
                         'received_at': {'$gt': datetime.now() - timedelta(hours=24)}
                     })
-                    
                     for callback in unmatched:
                         print(f"🔄 Retrying unmatched callback: {callback.get('callback_id')}")
-                        
-                        # Try to find payment again
                         checkout_id = callback.get('checkout_request_id')
                         payment = None
-                        
                         if checkout_id:
-                            payment = payments_collection.find_one({
-                                'mpesa_request_id': checkout_id
-                            })
-                        
+                            payment = payments_collection.find_one({'mpesa_request_id': checkout_id})
                         if payment:
-                            # Found payment - process it
                             result_code = callback.get('result_code', 0)
                             result_desc = callback.get('result_desc', 'Success')
-                            
                             if result_code == 0:
                                 payments_collection.update_one(
                                     {'_id': payment['_id']},
@@ -130,7 +115,6 @@ def process_unmatched_callbacks():
                                         'callback_received_at': datetime.now()
                                     }}
                                 )
-                                
                                 users_collection.update_one(
                                     {'user_id': payment['user_id']},
                                     {'$set': {
@@ -138,24 +122,16 @@ def process_unmatched_callbacks():
                                         'payment_date': datetime.now()
                                     }}
                                 )
-                                
                                 print(f"✅ Successfully processed unmatched callback for {payment['user_id']}")
-                                
-                                # Mark as processed
                                 db.unmatched_callbacks.update_one(
                                     {'_id': callback['_id']},
-                                    {'$set': {
-                                        'status': 'processed',
-                                        'processed_at': datetime.now()
-                                    }}
+                                    {'$set': {'status': 'processed', 'processed_at': datetime.now()}}
                                 )
                 except Exception as e:
                     print(f"Error processing unmatched callbacks: {e}")
-                        
         except Exception as e:
             print(f"Error in callback retry thread: {e}")
 
-# Start background thread if MongoDB is connected
 if db is not None:
     retry_thread = threading.Thread(target=process_unmatched_callbacks, daemon=True)
     retry_thread.start()
@@ -239,28 +215,209 @@ SUBJECT_NAME_MAP = {
     'electricity_electronics': 'electronics'
 }
 
-# Cluster definitions
+# ===== COMPLETE CLUSTER DEFINITIONS - RESTORED =====
+
 CLUSTERS = {
-    1: {'name': 'Cluster 1', 'description': 'Law', 'requirements': []},
-    2: {'name': 'Cluster 2', 'description': 'Business and Hospitality Related', 'requirements': []},
-    3: {'name': 'Cluster 3', 'description': 'Social Sciences And Arts', 'requirements': []},
-    4: {'name': 'Cluster 4', 'description': 'Geosciences', 'requirements': []},
-    5: {'name': 'Cluster 5', 'description': 'Engineering, Technology', 'requirements': []},
-    6: {'name': 'Cluster 6', 'description': 'Architecture, Building Construction', 'requirements': []},
-    7: {'name': 'Cluster 7', 'description': 'Computing, IT related', 'requirements': []},
-    8: {'name': 'Cluster 8', 'description': 'Agribusiness', 'requirements': []},
-    9: {'name': 'Cluster 9', 'description': 'General Sciences', 'requirements': []},
-    10: {'name': 'Cluster 10', 'description': 'Actuarial science', 'requirements': []},
-    11: {'name': 'Cluster 11', 'description': 'Interior Design', 'requirements': []},
-    12: {'name': 'Cluster 12', 'description': 'Sport Science', 'requirements': []},
-    13: {'name': 'Cluster 13', 'description': 'Medicine', 'requirements': []},
-    14: {'name': 'Cluster 14', 'description': 'History', 'requirements': []},
-    15: {'name': 'Cluster 15', 'description': 'Agriculture', 'requirements': []},
-    16: {'name': 'Cluster 16', 'description': 'Geography Focus', 'requirements': []},
-    17: {'name': 'Cluster 17', 'description': 'French and German', 'requirements': []},
-    18: {'name': 'Cluster 18', 'description': 'Music and Arts', 'requirements': []},
-    19: {'name': 'Cluster 19', 'description': 'Education Related', 'requirements': []},
-    20: {'name': 'Cluster 20', 'description': 'Religious Studies', 'requirements': []}
+    1: {
+        'name': 'Cluster 1',
+        'description': 'Law',
+        'requirements': [
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    2: {
+        'name': 'Cluster 2',
+        'description': 'Business and Hospitality Related',
+        'requirements': [
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    3: {
+        'name': 'Cluster 3',
+        'description': 'Social Sciences And Arts',
+        'requirements': [
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    4: {
+        'name': 'Cluster 4',
+        'description': 'Geosciences',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology', 'chemistry', 'geography'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    5: {
+        'name': 'Cluster 5',
+        'description': 'Engineering, Technology',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    6: {
+        'name': 'Cluster 6',
+        'description': 'Architecture, Building Construction',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    7: {
+        'name': 'Cluster 7',
+        'description': 'Computing, IT related',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['2nd_group_ii', 'any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    8: {
+        'name': 'Cluster 8',
+        'description': 'Agribusiness',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology'], 'type': 'specific', 'count': 1},
+            {'subjects': ['physics', 'chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    9: {
+        'name': 'Cluster 9',
+        'description': 'General Sciences',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    10: {
+        'name': 'Cluster 10',
+        'description': 'Actuarial science',
+        'requirements': [
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    11: {
+        'name': 'Cluster 11',
+        'description': 'Interior Design',
+        'requirements': [
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['biology', 'homescience'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    12: {
+        'name': 'Cluster 12',
+        'description': 'Sport Science',
+        'requirements': [
+            {'subjects': ['biology', 'general_science'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['english', 'kiswahili', 'any_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    13: {
+        'name': 'Cluster 13',
+        'description': 'Medicine',
+        'requirements': [
+            {'subjects': ['biology'], 'type': 'specific', 'count': 1},
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'physics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili', '3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    14: {
+        'name': 'Cluster 14',
+        'description': 'History',
+        'requirements': [
+            {'subjects': [], 'type': 'special', 'group': 'III', 'min_grade': 'C+', 'count': 1},
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    15: {
+        'name': 'Cluster 15',
+        'description': 'Agriculture',
+        'requirements': [
+            {'subjects': ['biology'], 'type': 'specific', 'count': 1},
+            {'subjects': ['chemistry'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'physics', 'geography'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili', '3rd_group_ii', 'any_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    16: {
+        'name': 'Cluster 16',
+        'description': 'Geography Focus',
+        'requirements': [
+            {'subjects': ['geography'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics'], 'type': 'specific', 'count': 1},
+            {'subjects': ['any_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['2nd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    17: {
+        'name': 'Cluster 17',
+        'description': 'French and German',
+        'requirements': [
+            {'subjects': ['french', 'german'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii', 'any_group_iii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv'], 'type': 'group', 'count': 1}
+        ]
+    },
+    18: {
+        'name': 'Cluster 18',
+        'description': 'Music and Arts',
+        'requirements': [
+            {'subjects': ['music'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii', 'any_group_iii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iii', 'any_group_iv', '2nd_group_v'], 'type': 'group', 'count': 1}
+        ]
+    },
+    19: {
+        'name': 'Cluster 19',
+        'description': 'Education Related',
+        'requirements': [
+            {'subjects': ['english'], 'type': 'specific', 'count': 1},
+            {'subjects': ['mathematics', 'any_group_ii'], 'type': 'specific_or_group', 'count': 1},
+            {'subjects': ['2nd_group_ii'], 'type': 'group', 'count': 1},
+            {'subjects': ['kiswahili', '3rd_group_ii', '2nd_group_iii', 'any_group_iv', 'any_group_v'], 'type': 'specific_or_group', 'count': 1}
+        ]
+    },
+    20: {
+        'name': 'Cluster 20',
+        'description': 'Religious Studies',
+        'requirements': [
+            {'subjects': ['cre', 'ire', 'hre'], 'type': 'specific', 'count': 1},
+            {'subjects': ['english', 'kiswahili'], 'type': 'specific', 'count': 1},
+            {'subjects': ['2nd_group_iii'], 'type': 'group', 'count': 1},
+            {'subjects': ['any_group_ii', 'any_group_iv', 'any_group_v'], 'type': 'group', 'count': 1}
+        ]
+    }
 }
 
 # ===== HELPER FUNCTIONS =====
@@ -307,14 +464,229 @@ def get_aggregate_points(grades):
     total_points = sum(p for _, p in top_7)
     return total_points, top_7
 
+# ===== COMPLETE CLUSTER POINTS CALCULATION - RESTORED =====
+
 def calculate_cluster_points(grades, cluster_id, debug=False):
-    valid_grades = [g for g in grades.values() if g]
-    if valid_grades:
-        avg_grade = sum(GRADE_POINTS.get(g, 0) for g in valid_grades) / len(valid_grades)
-        cluster_points = avg_grade * 4
-        cluster_points = max(0.000, min(48.000, cluster_points - 3.0))
-        return round(cluster_points, 3), [], []
-    return 0.000, [], []
+    """
+    Calculate cluster points using the formula:
+    Cluster Points = sqrt((x/48) * (y/84)) * 48 - 3
+    
+    Where:
+    x = sum of points in the 4 required cluster subjects (must be unique subjects)
+    y = Aggregate Points (AGP) = sum of the best 7 subjects (can include cluster subjects)
+    48 = maximum points possible in 4 subjects (12 × 4)
+    84 = maximum points possible in 7 subjects (12 × 7)
+    
+    Returns: (points, subjects_used, requirement_failures)
+    """
+    cluster = CLUSTERS.get(cluster_id)
+    if not cluster:
+        if debug:
+            print(f"Cluster {cluster_id} not found")
+        return 0.000, [], ["Cluster not found"]
+    
+    cluster_subjects_points = 0
+    subjects_used = []
+    requirement_failures = []
+    
+    for req_index, requirement in enumerate(cluster['requirements']):
+        req_type = requirement.get('type', 'specific')
+        req_subjects = requirement.get('subjects', [])
+        req_count = requirement.get('count', 1)
+        
+        # Handle special requirements first (Cluster 14 - HAG C+)
+        if req_type == 'special' and cluster_id == 14 and req_index == 0:
+            best_group_iii = get_best_subjects_by_group(grades, 'Group III', 1)
+            
+            if best_group_iii and best_group_iii[0][1] >= GRADE_POINTS.get('C+', 0):
+                subject, points, grade = best_group_iii[0]
+                cluster_subjects_points += points
+                subjects_used.append({
+                    'subject': subject,
+                    'grade': grade,
+                    'points': points,
+                    'requirement': 'HAG C+ (Group III)',
+                    'group': 'Group III',
+                    'requirement_index': req_index + 1
+                })
+            else:
+                requirement_failures.append(f"Requirement 1: No Group III subject with C+ or better")
+                return 0.000, subjects_used, requirement_failures
+            continue
+        
+        found_subjects = []
+        found_points = 0
+        considered_subjects = [s['subject'] for s in subjects_used]
+        
+        # Check specific subjects first
+        if req_type in ['specific', 'specific_or_group']:
+            for subject_option in req_subjects:
+                normalized_option = normalize_subject_name(subject_option)
+                
+                if normalized_option in grades and grades[normalized_option]:
+                    if normalized_option in considered_subjects:
+                        continue
+                    
+                    points = GRADE_POINTS.get(grades[normalized_option], 0)
+                    found_subjects.append({
+                        'subject': normalized_option,
+                        'grade': grades[normalized_option],
+                        'points': points,
+                        'requirement': f"Specific: {subject_option}",
+                        'group': get_subject_group(normalized_option),
+                        'requirement_index': req_index + 1
+                    })
+                    found_points += points
+                    considered_subjects.append(normalized_option)
+                    
+                    if len(found_subjects) >= req_count:
+                        break
+        
+        # If not enough specific subjects found, check group requirements
+        if len(found_subjects) < req_count and req_type in ['group', 'specific_or_group']:
+            for subject_option in req_subjects:
+                if subject_option.startswith('any_group_'):
+                    parts = subject_option.split('_')
+                    if len(parts) >= 3:
+                        group_num = parts[2].upper()
+                        group_name = f'Group {group_num}'
+                        
+                        available = get_best_subjects_by_group(grades, group_name, 
+                                                             req_count - len(found_subjects), 
+                                                             considered_subjects)
+                        
+                        for subject, points, grade in available:
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"Group {group_num}: {subject_option}",
+                                'group': group_name,
+                                'requirement_index': req_index + 1
+                            })
+                            found_points += points
+                            considered_subjects.append(subject)
+                            
+                            if len(found_subjects) >= req_count:
+                                break
+                        if len(found_subjects) >= req_count:
+                            break
+                
+                elif subject_option.startswith('2nd_group_'):
+                    parts = subject_option.split('_')
+                    if len(parts) >= 3:
+                        group_num = parts[2].upper()
+                        group_name = f'Group {group_num}'
+                        
+                        all_in_group = get_best_subjects_by_group(grades, group_name, 10, considered_subjects)
+                        
+                        if len(all_in_group) >= 2:
+                            subject, points, grade = all_in_group[1]
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"2nd Group {group_num}",
+                                'group': group_name,
+                                'requirement_index': req_index + 1
+                            })
+                            found_points += points
+                            considered_subjects.append(subject)
+                        elif len(all_in_group) == 1:
+                            subject, points, grade = all_in_group[0]
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"Only available from Group {group_num}",
+                                'group': group_name,
+                                'requirement_index': req_index + 1
+                            })
+                            found_points += points
+                            considered_subjects.append(subject)
+                
+                elif subject_option.startswith('3rd_group_'):
+                    parts = subject_option.split('_')
+                    if len(parts) >= 3:
+                        group_num = parts[2].upper()
+                        group_name = f'Group {group_num}'
+                        
+                        all_in_group = get_best_subjects_by_group(grades, group_name, 10, considered_subjects)
+                        
+                        if len(all_in_group) >= 3:
+                            subject, points, grade = all_in_group[2]
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"3rd Group {group_num}",
+                                'group': group_name,
+                                'requirement_index': req_index + 1
+                            })
+                            found_points += points
+                            considered_subjects.append(subject)
+                        elif len(all_in_group) == 2:
+                            subject, points, grade = all_in_group[1]
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"2nd best from Group {group_num}",
+                                'group': group_name,
+                                'requirement_index': req_index + 1
+                            })
+                            found_points += points
+                            considered_subjects.append(subject)
+                        elif len(all_in_group) == 1:
+                            subject, points, grade = all_in_group[0]
+                            found_subjects.append({
+                                'subject': subject,
+                                'grade': grade,
+                                'points': points,
+                                'requirement': f"Only available from Group {group_num}",
+                                'group': group_name,
+                                'requirement_index': req_index + 1
+                            })
+                            found_points += points
+                            considered_subjects.append(subject)
+                
+                if len(found_subjects) >= req_count:
+                    break
+        
+        if len(found_subjects) >= req_count:
+            subjects_used.extend(found_subjects)
+            cluster_subjects_points += found_points
+        else:
+            requirement_failures.append(
+                f"Requirement {req_index + 1}: Could not satisfy {req_subjects}"
+            )
+            return 0.000, subjects_used, requirement_failures
+    
+    expected_count = 4
+    if len(subjects_used) != expected_count:
+        requirement_failures.append(f"Wrong number of subjects: {len(subjects_used)} instead of {expected_count}")
+        return 0.000, subjects_used, requirement_failures
+    
+    aggregate_points, top_7_subjects = get_aggregate_points(grades)
+    
+    x = cluster_subjects_points
+    y = aggregate_points
+    
+    if x <= 0 or y <= 0:
+        requirement_failures.append(f"Invalid points calculation: x={x}, y={y}")
+        return 0.000, subjects_used, requirement_failures
+    
+    try:
+        cluster_points = math.sqrt((x / 48.0) * (y / 84.0)) * 48.0
+        cluster_points = min(cluster_points, 48.0)
+        cluster_points_with_deviation = max(0.000, cluster_points - 3.0)
+        cluster_points = round(cluster_points, 3)
+        cluster_points_with_deviation = round(cluster_points_with_deviation, 3)
+        
+        return cluster_points_with_deviation, subjects_used, []
+    except Exception as e:
+        requirement_failures.append(f"Calculation error: {str(e)}")
+        return 0.000, subjects_used, requirement_failures
 
 def validate_kcse_index(kcse_index):
     pattern = r'^\d{11}/\d{4}$'
@@ -448,7 +820,6 @@ def process_callback_data(raw_data, request_path):
             print("❌ Could not parse callback data")
             return None
         
-        # Extract callback data
         callback_data = None
         if 'Body' in data and 'stkCallback' in data['Body']:
             callback_data = data['Body']['stkCallback']
@@ -473,7 +844,6 @@ def process_callback_data(raw_data, request_path):
         if not checkout_id and not merchant_id:
             return None
         
-        # Find payment record
         payment_record = None
         
         if checkout_id:
@@ -630,7 +1000,6 @@ def process_callback_data(raw_data, request_path):
 
 @app.route('/mpesa/callback', methods=['POST'])
 def mpesa_callback_main():
-    """Main callback endpoint matching working apps"""
     try:
         raw_data = request.get_data(as_text=True)
         result = process_callback_data(raw_data, '/mpesa/callback')
@@ -643,7 +1012,6 @@ def mpesa_callback_main():
 
 @app.route('/callback', methods=['POST'])
 def callback_original():
-    """Original callback endpoint for backward compatibility"""
     try:
         raw_data = request.get_data(as_text=True)
         result = process_callback_data(raw_data, '/callback')
@@ -656,7 +1024,6 @@ def callback_original():
 
 @app.route('/mpesa-callback', methods=['POST'])
 def mpesa_callback_hyphen():
-    """Alternative callback endpoint with hyphen"""
     try:
         raw_data = request.get_data(as_text=True)
         result = process_callback_data(raw_data, '/mpesa-callback')
@@ -669,7 +1036,6 @@ def mpesa_callback_hyphen():
 
 @app.route('/lnm/result', methods=['POST'])
 def lipa_na_mpesa_callback():
-    """Lipa Na M-Pesa callback endpoint"""
     try:
         raw_data = request.get_data(as_text=True)
         result = process_callback_data(raw_data, '/lnm/result')
@@ -680,7 +1046,7 @@ def lipa_na_mpesa_callback():
         print(f"❌ Error in /lnm/result: {e}")
         return jsonify({'ResultCode': 0, 'ResultDesc': 'Received'})
 
-# ===== OTHER ROUTES =====
+# ===== MAIN ROUTES =====
 
 @app.route('/')
 def index():
@@ -875,10 +1241,8 @@ def register():
 
 @app.route('/check-payment-status/<checkout_id>')
 def check_payment_status(checkout_id):
-    """Check if payment was actually made via M-Pesa API"""
     try:
         access_token = generate_access_token()
-        
         url = 'https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query'
         
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -893,7 +1257,6 @@ def check_payment_status(checkout_id):
         }
         
         headers = {'Authorization': f'Bearer {access_token}'}
-        
         response = requests.post(url, json=payload, headers=headers, timeout=30)
         result = response.json()
         
@@ -991,11 +1354,13 @@ def calculate():
         cluster_details = {}
         
         for cluster_id in range(1, 21):
-            points, subjects_used, failures = calculate_cluster_points(grades, cluster_id)
+            points, subjects_used, failures = calculate_cluster_points(grades, cluster_id, debug=False)
             results[f'Cluster {cluster_id}'] = f"{points:.3f}"
             cluster_details[f'Cluster {cluster_id}'] = {
                 'points': points,
-                'description': CLUSTERS.get(cluster_id, {}).get('description', '')
+                'subjects_used': subjects_used,
+                'failures': failures,
+                'description': CLUSTERS[cluster_id]['description']
             }
         
         aggregate_points, top_7_subjects = get_aggregate_points(grades)
@@ -1022,7 +1387,11 @@ def calculate():
             'aggregate_points': aggregate_points,
             'top_7_subjects': result_data['top_7_subjects'],
             'result_id': result_id,
-            'subjects_count': subjects_with_grades
+            'subjects_count': subjects_with_grades,
+            'formula': 'Cluster Points = √((x/48) × (y/84)) × 48 - 3',
+            'note': 'x = sum of 4 unique cluster subjects, y = aggregate points (best 7 subjects)',
+            'deviation_note': 'A -3 deviation has been applied to all cluster points',
+            'warning': 'At least 7 subjects needed for accurate calculation' if subjects_with_grades < 7 else None
         })
         
     except Exception as e:
