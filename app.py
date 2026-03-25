@@ -1530,22 +1530,70 @@ def admin_dashboard():
 @admin_required
 def admin_stats():
     try:
-        total_payments = payments_collection.count_documents({'status': 'completed'})
-        total_amount = sum(p.get('amount', 0) for p in payments_collection.find({'status': 'completed'}))
+        # Get ALL completed payments
+        all_completed = list(payments_collection.find({'status': 'completed'}))
+        
+        # Calculate total from ALL completed payments (real-time total)
+        total_amount = sum(p.get('amount', PAYMENT_AMOUNT) for p in all_completed)
+        total_successful = len(all_completed)
+        
+        # Get failed payments count
+        failed_payments = payments_collection.count_documents({'status': 'failed'})
+        
+        # Get user stats
         total_users = users_collection.count_documents({})
         paid_users = users_collection.count_documents({'payment_status': 'completed'})
+        
+        # Get pending payment issues count
+        pending_issues = 0
+        try:
+            if db is not None and hasattr(payment_issues_collection, 'count_documents'):
+                pending_issues = payment_issues_collection.count_documents({'status': 'pending'})
+        except:
+            pass
+        
+        # Get recent payments (last 50) for display
+        recent_payments = list(payments_collection.find(
+            {'status': 'completed'},
+            sort=[('created_at', -1)],
+            limit=50
+        ))
+        
+        # Format recent payments
+        formatted_payments = []
+        for payment in recent_payments:
+            user = users_collection.find_one({'user_id': payment.get('user_id')})
+            
+            formatted_payments.append({
+                'created_at': payment.get('created_at').isoformat() if payment.get('created_at') else datetime.now().isoformat(),
+                'mpesa_receipt': payment.get('mpesa_receipt', 'N/A'),
+                'kcse_index': payment.get('kcse_index', user.get('kcse_index', 'N/A') if user else 'N/A'),
+                'amount': payment.get('amount', PAYMENT_AMOUNT),
+                'status': payment.get('status', 'completed'),
+                'manual_payment': payment.get('manual_payment', False)
+            })
+        
+        # Calculate conversion rate
+        conversion_rate = round((paid_users / total_users * 100), 2) if total_users > 0 else 0
         
         return jsonify({
             'success': True,
             'stats': {
-                'total_payments': total_payments,
                 'total_amount': total_amount,
+                'total_successful': total_successful,
+                'failed_payments': failed_payments,
                 'total_users': total_users,
                 'paid_users': paid_users,
-                'pending_users': total_users - paid_users
-            }
+                'pending_users': total_users - paid_users,
+                'pending_issues': pending_issues,
+                'conversion_rate': conversion_rate
+            },
+            'recent_payments': formatted_payments
         })
+        
     except Exception as e:
+        logger.error(f"Admin stats error: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/admin/api/users')
@@ -1697,10 +1745,17 @@ def allowed_file(filename):
 
 # Create payment_issues collection if using MongoDB
 # Create payment_issues collection if using MongoDB
+# Create payment_issues collection if using MongoDB (only once)
 if db is not None:
     payment_issues_collection = db['payment_issues']
+    # Create index for faster queries
+    payment_issues_collection.create_index('kcse_index')
+    payment_issues_collection.create_index('email')
+    payment_issues_collection.create_index('status')
+    print("✅ Payment issues collection ready")
 else:
     payment_issues_collection = DummyCollection()
+    print("⚠️ Using dummy collection for payment issues")
 
 # ===== PAYMENT ISSUE REPORTING ROUTES =====
 
@@ -1964,6 +2019,35 @@ def admin_get_screenshot(issue_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/check-pending-activation', methods=['POST'])
+def check_pending_activation():
+    """Check if user has a pending activation request"""
+    try:
+        data = request.json
+        identifier = data.get('identifier', '')
+        
+        if not identifier:
+            return jsonify({'success': True, 'has_pending_activation': False})
+        
+        pending = payment_issues_collection.find_one({
+            '$or': [
+                {'kcse_index': identifier},
+                {'email': identifier}
+            ],
+            'status': 'pending'
+        })
+        
+        if pending:
+            return jsonify({
+                'success': True,
+                'has_pending_activation': True,
+                'reported_at': pending['reported_at'].isoformat() if pending.get('reported_at') else None
+            })
+        
+        return jsonify({'success': True, 'has_pending_activation': False})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Email helper functions (implement based on your email service)
 def send_confirmation_email(email, kcse_index, issue_id):
@@ -1980,6 +2064,19 @@ def send_rejection_email(email, kcse_index, reason):
     """Send rejection email to user"""
     # Implement your email sending logic here
     pass
+@app.route('/admin/api/delete-failed-payments', methods=['POST'])
+@admin_required
+def admin_delete_failed_payments():
+    """Delete all failed payments"""
+    try:
+        result = payments_collection.delete_many({'status': 'failed'})
+        return jsonify({
+            'success': True,
+            'message': f'Deleted {result.deleted_count} failed payment records'
+        })
+    except Exception as e:
+        logger.error(f"Delete failed payments error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("=" * 60)

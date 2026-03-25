@@ -83,6 +83,12 @@
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             border-left: 5px solid var(--kuccps-red);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
         }
         
         .stat-card h3 {
@@ -103,6 +109,16 @@
         .stat-label {
             color: var(--kuccps-medium-grey);
             font-size: 14px;
+        }
+        
+        .live-badge {
+            background: var(--kuccps-green);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            vertical-align: middle;
         }
         
         .tab-container {
@@ -395,6 +411,18 @@
             border-radius: 6px;
             margin-bottom: 20px;
             font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
         
         .alert-success {
@@ -447,12 +475,11 @@
             cursor: pointer;
         }
         
-        .issue-card {
-            background: #f8f9fa;
-            border-left: 4px solid var(--kuccps-orange);
+        .last-update {
+            font-size: 12px;
+            color: var(--kuccps-medium-grey);
             margin-bottom: 15px;
-            padding: 15px;
-            border-radius: 8px;
+            text-align: right;
         }
         
         @media (max-width: 768px) {
@@ -473,6 +500,10 @@
                 width: 95%;
                 padding: 20px;
             }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -486,10 +517,19 @@
     </div>
     
     <div class="container">
+        <!-- Last Update Info -->
+        <div class="last-update">
+            <i class="fas fa-clock me-1"></i>
+            <span id="lastUpdateTime">Last update: Just now</span>
+            <button class="btn btn-sm btn-outline-primary ms-2" onclick="manualRefresh()">
+                <i class="fas fa-sync-alt"></i> Refresh Now
+            </button>
+        </div>
+        
         <!-- Stats Cards -->
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card">
-                <h3><i class="fas fa-money-bill-wave me-2" style="color: var(--kuccps-green);"></i> Total Revenue</h3>
+                <h3><i class="fas fa-money-bill-wave me-2" style="color: var(--kuccps-green);"></i> Total Revenue <span class="live-badge">LIVE</span></h3>
                 <div class="stat-number" id="totalAmount">Ksh 0</div>
                 <div class="stat-label" id="successfulCount">0 successful payments</div>
             </div>
@@ -801,6 +841,8 @@
     <script>
         let currentTab = 'overview';
         let deleteCallback = null;
+        let lastTotalAmount = 0;
+        let lastCheckTime = new Date();
         let allData = {
             payments: [],
             failed: [],
@@ -813,13 +855,41 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
             loadOverview();
+            updateTimestamp();
             
             // Setup form submission
             document.getElementById('manualPaymentForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 addManualPayment();
             });
+            
+            // Start real-time updates
+            startRealTimeUpdates();
         });
+
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            document.getElementById('lastUpdateTime').innerHTML = `<i class="fas fa-clock me-1"></i> Last update: ${timeStr}`;
+        }
+
+        // Start real-time updates
+        function startRealTimeUpdates() {
+            // Update every 10 seconds
+            setInterval(() => {
+                if (currentTab) {
+                    refreshAllData();
+                }
+            }, 10000);
+        }
+
+        // Refresh all data
+        async function refreshAllData() {
+            await loadStats();
+            await loadTabData(currentTab);
+            updateTimestamp();
+        }
 
         // Show alert
         function showAlert(message, type) {
@@ -832,7 +902,6 @@
             `;
             
             const container = document.getElementById('alertContainer');
-            container.innerHTML = '';
             container.appendChild(alertDiv);
             
             setTimeout(() => {
@@ -870,25 +939,40 @@
             }
         }
 
+        // Manual refresh
+        function manualRefresh() {
+            refreshAllData();
+            showAlert('Dashboard manually refreshed', 'info');
+        }
+
         // Refresh all data
         function refreshData() {
-            loadStats();
-            loadTabData(currentTab);
+            refreshAllData();
             showAlert('Data refreshed successfully', 'success');
         }
 
-        // Load stats
+        // Load stats with real-time updates
         async function loadStats() {
             try {
                 const response = await fetch('/admin/api/stats');
                 const data = await response.json();
                 
                 if (data.success) {
-                    document.getElementById('totalAmount').textContent = `Ksh ${data.stats.total_amount.toLocaleString()}`;
+                    const currentTotal = data.stats.total_amount;
+                    
+                    // Check for new payments
+                    if (lastTotalAmount > 0 && currentTotal > lastTotalAmount) {
+                        const difference = currentTotal - lastTotalAmount;
+                        showAlert(`💰 New payment received! +Ksh ${difference.toLocaleString()}`, 'success');
+                    }
+                    
+                    lastTotalAmount = currentTotal;
+                    
+                    document.getElementById('totalAmount').textContent = `Ksh ${currentTotal.toLocaleString()}`;
                     document.getElementById('successfulCount').textContent = `${data.stats.total_successful} successful payments`;
                     document.getElementById('failedCount').textContent = data.stats.failed_payments;
                     document.getElementById('totalUsers').textContent = data.stats.total_users;
-                    document.getElementById('paidUsers').textContent = `${data.stats.paid_users} paid`;
+                    document.getElementById('paidUsers').textContent = `${data.stats.paid_users} paid (${data.stats.conversion_rate}%)`;
                     document.getElementById('pendingIssues').textContent = data.stats.pending_issues || 0;
                     
                     allData.payments = data.recent_payments || [];
@@ -1468,14 +1552,6 @@
                 showAlert('Failed to delete user', 'error');
             }
         }
-
-        // Auto-refresh every 30 seconds
-        setInterval(() => {
-            if (currentTab) {
-                loadStats();
-                loadTabData(currentTab);
-            }
-        }, 30000);
     </script>
 </body>
 </html>
