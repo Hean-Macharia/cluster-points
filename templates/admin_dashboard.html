@@ -17,6 +17,7 @@
             --kuccps-blue: #1565C0;
             --kuccps-green: #2E7D32;
             --kuccps-purple: #7B1FA2;
+            --kuccps-orange: #F57C00;
         }
         
         body {
@@ -209,6 +210,16 @@
             transform: translateY(-2px);
         }
         
+        .btn-info {
+            background: var(--kuccps-blue);
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #0D47A1;
+            transform: translateY(-2px);
+        }
+        
         .table-responsive {
             overflow-x: auto;
         }
@@ -265,6 +276,11 @@
             color: #553c9a;
         }
         
+        .badge-info {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+        
         .modal {
             display: none;
             position: fixed;
@@ -287,17 +303,20 @@
             border-radius: 10px;
             padding: 30px;
             width: 90%;
-            max-width: 500px;
+            max-width: 600px;
             max-height: 90vh;
             overflow-y: auto;
         }
         
         .modal-header {
-            background: var(--kuccps-red);
+            background: linear-gradient(135deg, var(--kuccps-red) 0%, #B71C1C 100%);
             color: white;
             padding: 15px 20px;
             margin: -30px -30px 20px -30px;
             border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .modal-header h2 {
@@ -309,7 +328,8 @@
             color: white;
             font-size: 1.5rem;
             cursor: pointer;
-            float: right;
+            background: none;
+            border: none;
         }
         
         .form-group {
@@ -325,7 +345,8 @@
         }
         
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 10px;
             border: 2px solid #e0e0e0;
@@ -334,7 +355,8 @@
         }
         
         .form-group input:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: var(--kuccps-red);
         }
@@ -352,12 +374,11 @@
             color: var(--kuccps-medium-grey);
         }
         
-        .loading::after {
-            content: '';
+        .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            margin-left: 10px;
+            margin-right: 10px;
             border: 3px solid #f3f3f3;
             border-top: 3px solid var(--kuccps-red);
             border-radius: 50%;
@@ -394,6 +415,12 @@
             border: 1px solid #90cdf4;
         }
         
+        .alert-warning {
+            background: #feebc8;
+            color: #744210;
+            border: 1px solid #fbd38d;
+        }
+        
         .filter-section {
             background: #f8f9fa;
             padding: 15px;
@@ -413,25 +440,19 @@
             border-radius: 6px;
         }
         
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .pagination button {
-            padding: 8px 12px;
-            border: 1px solid #e0e0e0;
-            background: white;
-            border-radius: 4px;
+        .screenshot-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
             cursor: pointer;
         }
         
-        .pagination button.active {
-            background: var(--kuccps-red);
-            color: white;
-            border-color: var(--kuccps-red);
+        .issue-card {
+            background: #f8f9fa;
+            border-left: 4px solid var(--kuccps-orange);
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
         }
         
         @media (max-width: 768px) {
@@ -446,6 +467,11 @@
             
             .tab.active {
                 border-bottom: 1px solid var(--kuccps-red);
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 20px;
             }
         }
     </style>
@@ -478,9 +504,9 @@
                 <div class="stat-label" id="paidUsers">0 paid</div>
             </div>
             <div class="stat-card">
-                <h3><i class="fas fa-chart-line me-2" style="color: var(--kuccps-yellow);"></i> Conversion Rate</h3>
-                <div class="stat-number" id="conversionRate">0%</div>
-                <div class="stat-label">users who paid</div>
+                <h3><i class="fas fa-headset me-2" style="color: var(--kuccps-orange);"></i> Pending Issues</h3>
+                <div class="stat-number" id="pendingIssues">0</div>
+                <div class="stat-label">payment issue reports</div>
             </div>
         </div>
         
@@ -495,6 +521,9 @@
                 </button>
                 <button class="tab" onclick="switchTab('manual')">
                     <i class="fas fa-hand-holding-heart me-2"></i>Manual Activation
+                </button>
+                <button class="tab" onclick="switchTab('issues')">
+                    <i class="fas fa-headset me-2"></i>Payment Issues
                 </button>
                 <button class="tab" onclick="switchTab('failed')">
                     <i class="fas fa-exclamation-triangle me-2"></i>Failed Payments
@@ -519,7 +548,7 @@
                 </div>
                 
                 <div class="table-responsive">
-                    <table>
+                    <table class="table">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -527,11 +556,11 @@
                                 <th>KCSE Index</th>
                                 <th>Amount</th>
                                 <th>Status</th>
-                                <th>Manual</th>
+                                <th>Type</th>
                             </tr>
                         </thead>
                         <tbody id="recentPaymentsTable">
-                            <tr><td colspan="6" class="loading">Loading...</td></tr>
+                            <tr><td colspan="6" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -559,7 +588,7 @@
                 </div>
                 
                 <div class="table-responsive">
-                    <table>
+                    <table class="table">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -572,7 +601,46 @@
                             </tr>
                         </thead>
                         <tbody id="manualPaymentsTable">
-                            <tr><td colspan="7" class="loading">Loading...</td></tr>
+                            <tr><td colspan="7" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Payment Issues Tab -->
+            <div id="issuesTab" class="tab-content">
+                <div class="action-bar">
+                    <h3><i class="fas fa-headset me-2" style="color: var(--kuccps-orange);"></i> Payment Issue Reports</h3>
+                    <button class="btn btn-primary" onclick="loadPaymentIssues()">
+                        <i class="fas fa-sync-alt me-2"></i> Refresh
+                    </button>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock me-2"></i>
+                    Users report payment issues when they paid but didn't receive results. 
+                    Review the screenshot, verify payment, then approve to activate manual payment.
+                </div>
+                
+                <div class="filter-section">
+                    <i class="fas fa-search me-2" style="color: var(--kuccps-medium-grey);"></i>
+                    <input type="text" class="filter-input" id="issueFilter" placeholder="Search by KCSE Index, Email or Receipt..." onkeyup="filterIssues()">
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Reported</th>
+                                <th>KCSE Index</th>
+                                <th>Email</th>
+                                <th>Receipt</th>
+                                <th>Screenshot</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentIssuesTable">
+                            <tr><td colspan="6" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -593,7 +661,7 @@
                 </div>
                 
                 <div class="table-responsive">
-                    <table>
+                    <table class="table">
                         <thead>
                             <tr>
                                 <th>Date</th>
@@ -605,7 +673,7 @@
                             </tr>
                         </thead>
                         <tbody id="failedPaymentsTable">
-                            <tr><td colspan="6" class="loading">Loading...</td></tr>
+                            <tr><td colspan="6" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -623,7 +691,7 @@
                 </div>
                 
                 <div class="table-responsive">
-                    <table>
+                    <table class="table">
                         <thead>
                             <tr>
                                 <th>Registered</th>
@@ -637,13 +705,9 @@
                             </tr>
                         </thead>
                         <tbody id="usersTable">
-                            <tr><td colspan="8" class="loading">Loading...</td></tr>
+                            <tr><td colspan="8" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>
                         </tbody>
                     </table>
-                </div>
-                
-                <div class="pagination" id="userPagination">
-                    <!-- Pagination will be populated here -->
                 </div>
             </div>
         </div>
@@ -654,41 +718,59 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-hand-holding-heart me-2"></i> Add Manual Payment</h2>
-                <span class="close" onclick="hideManualPaymentModal()">&times;</span>
+                <button class="close" onclick="hideManualPaymentModal()">&times;</button>
             </div>
             
-            <div class="form-group">
-                <label for="manualKcseIndex">KCSE Index *</label>
-                <input type="text" id="manualKcseIndex" placeholder="12345678912/2024">
-                <small class="text-muted">Format: 11 digits/year</small>
+            <form id="manualPaymentForm">
+                <div class="form-group">
+                    <label for="manualKcseIndex">KCSE Index *</label>
+                    <input type="text" id="manualKcseIndex" placeholder="12345678912/2024" required>
+                    <small class="text-muted">Format: 11 digits/year</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="manualEmail">Email *</label>
+                    <input type="email" id="manualEmail" placeholder="user@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="manualReceipt">M-Pesa Receipt *</label>
+                    <input type="text" id="manualReceipt" placeholder="RKT6QX8P9V" required>
+                    <small class="text-muted">Enter a unique receipt number</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="manualPhone">Phone Number (Optional)</label>
+                    <input type="text" id="manualPhone" placeholder="0712345678">
+                </div>
+                
+                <div class="form-group">
+                    <label for="manualAmount">Amount (Ksh)</label>
+                    <input type="number" id="manualAmount" value="100" min="1">
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideManualPaymentModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle me-2"></i> Activate Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Screenshot Modal -->
+    <div id="screenshotModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-image me-2"></i> Payment Screenshot</h2>
+                <button class="close" onclick="hideScreenshotModal()">&times;</button>
             </div>
-            
-            <div class="form-group">
-                <label for="manualEmail">Email *</label>
-                <input type="email" id="manualEmail" placeholder="user@example.com">
+            <div id="screenshotImage" class="text-center p-4">
+                <div class="loading-spinner"></div> Loading...
             </div>
-            
-            <div class="form-group">
-                <label for="manualReceipt">M-Pesa Receipt *</label>
-                <input type="text" id="manualReceipt" placeholder="RKT6QX8P9V">
-                <small class="text-muted">Enter a unique receipt number</small>
-            </div>
-            
-            <div class="form-group">
-                <label for="manualPhone">Phone Number (Optional)</label>
-                <input type="text" id="manualPhone" placeholder="0712345678">
-            </div>
-            
-            <div class="form-group">
-                <label for="manualAmount">Amount (Ksh)</label>
-                <input type="number" id="manualAmount" value="100" min="1">
-            </div>
-            
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="hideManualPaymentModal()">Cancel</button>
-                <button class="btn btn-success" onclick="addManualPayment()">
-                    <i class="fas fa-check-circle me-2"></i> Activate Payment
-                </button>
+                <button class="btn btn-secondary" onclick="hideScreenshotModal()">Close</button>
             </div>
         </div>
     </div>
@@ -696,9 +778,9 @@
     <!-- Delete Confirmation Modal -->
     <div id="deleteConfirmModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header" style="background: var(--kuccps-red);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);">
                 <h2><i class="fas fa-exclamation-triangle me-2"></i> Confirm Delete</h2>
-                <span class="close" onclick="hideDeleteModal()">&times;</span>
+                <button class="close" onclick="hideDeleteModal()">&times;</button>
             </div>
             
             <div class="p-4 text-center">
@@ -723,13 +805,20 @@
             payments: [],
             failed: [],
             users: [],
-            manual: []
+            manual: [],
+            issues: []
         };
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
             loadOverview();
+            
+            // Setup form submission
+            document.getElementById('manualPaymentForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addManualPayment();
+            });
         });
 
         // Show alert
@@ -739,7 +828,7 @@
             alertDiv.innerHTML = `
                 <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} me-2"></i>
                 ${message}
-                <button type="button" class="btn-close float-end" onclick="this.parentElement.remove()"></button>
+                <button type="button" class="btn-close float-end" onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
             `;
             
             const container = document.getElementById('alertContainer');
@@ -776,6 +865,8 @@
                 loadUsers();
             } else if (tab === 'manual') {
                 loadManualPayments();
+            } else if (tab === 'issues') {
+                loadPaymentIssues();
             }
         }
 
@@ -798,17 +889,12 @@
                     document.getElementById('failedCount').textContent = data.stats.failed_payments;
                     document.getElementById('totalUsers').textContent = data.stats.total_users;
                     document.getElementById('paidUsers').textContent = `${data.stats.paid_users} paid`;
-                    
-                    const conversionRate = data.stats.total_users > 0 
-                        ? Math.round((data.stats.paid_users / data.stats.total_users) * 100) 
-                        : 0;
-                    document.getElementById('conversionRate').textContent = `${conversionRate}%`;
+                    document.getElementById('pendingIssues').textContent = data.stats.pending_issues || 0;
                     
                     allData.payments = data.recent_payments || [];
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
-                showAlert('Failed to load statistics', 'error');
             }
         }
 
@@ -831,11 +917,10 @@
                 }
             } catch (error) {
                 console.error('Error loading overview:', error);
-                showAlert('Failed to load recent payments', 'error');
             }
         }
 
-        // Display payments with filter
+        // Display payments
         function displayPayments(payments) {
             const tbody = document.getElementById('recentPaymentsTable');
             tbody.innerHTML = '';
@@ -871,11 +956,246 @@
             displayPayments(filtered);
         }
 
+        // Load manual payments
+        async function loadManualPayments() {
+            try {
+                const response = await fetch('/admin/api/users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const manualUsers = data.users.filter(u => u.manual_activation);
+                    allData.manual = manualUsers;
+                    displayManualPayments(manualUsers);
+                }
+            } catch (error) {
+                console.error('Error loading manual payments:', error);
+            }
+        }
+
+        // Display manual payments
+        function displayManualPayments(users) {
+            const tbody = document.getElementById('manualPaymentsTable');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No manual payments found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                const date = user.activated_at ? new Date(user.activated_at).toLocaleDateString() : 'N/A';
+                const index = user.kcse_index || 'N/A';
+                const email = user.email || 'N/A';
+                const receipt = user.payment_receipt || 'N/A';
+                const phone = user.phone_number || 'N/A';
+                
+                let status = 'Active';
+                let statusClass = 'badge-success';
+                let daysLeft = 'N/A';
+                
+                if (user.manual_used) {
+                    status = 'Used';
+                    statusClass = 'badge-warning';
+                    daysLeft = 'Expired';
+                } else if (user.manual_expired) {
+                    status = 'Expired';
+                    statusClass = 'badge-danger';
+                    daysLeft = 'Expired';
+                } else if (user.activated_at) {
+                    const activated = new Date(user.activated_at);
+                    const now = new Date();
+                    const diffDays = 30 - Math.floor((now - activated) / (1000 * 60 * 60 * 24));
+                    daysLeft = diffDays > 0 ? `${diffDays} days` : '<span class="badge badge-danger">Expired</span>';
+                    if (diffDays <= 0) {
+                        status = 'Expired';
+                        statusClass = 'badge-danger';
+                    }
+                }
+                
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td>${index}</td>
+                    <td>${email}</td>
+                    <td><code>${receipt}</code></td>
+                    <td>${phone}</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
+                    <td>${daysLeft}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter manual payments
+        function filterManualPayments() {
+            const filter = document.getElementById('manualFilter').value.toLowerCase();
+            const filtered = allData.manual.filter(u => 
+                (u.kcse_index && u.kcse_index.toLowerCase().includes(filter)) ||
+                (u.email && u.email.toLowerCase().includes(filter))
+            );
+            displayManualPayments(filtered);
+        }
+
+        // Load payment issues
+        async function loadPaymentIssues() {
+            try {
+                const tbody = document.getElementById('paymentIssuesTable');
+                tbody.innerHTML = '<tr><td colspan="6" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>';
+                
+                const response = await fetch('/admin/api/payment-issues');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">Error: ${data.error}</td></tr>`;
+                    return;
+                }
+                
+                if (data.issues.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No pending payment issues found</td></tr>';
+                    return;
+                }
+                
+                allData.issues = data.issues;
+                displayPaymentIssues(data.issues);
+                
+            } catch (error) {
+                console.error('Error loading payment issues:', error);
+                document.getElementById('paymentIssuesTable').innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Error loading issues</td></tr>';
+            }
+        }
+
+        // Display payment issues
+        function displayPaymentIssues(issues) {
+            const tbody = document.getElementById('paymentIssuesTable');
+            tbody.innerHTML = '';
+            
+            issues.forEach(issue => {
+                const row = document.createElement('tr');
+                const reportedDate = issue.reported_at ? new Date(issue.reported_at).toLocaleString() : 'N/A';
+                
+                row.innerHTML = `
+                    <td><small>${reportedDate}</small></td>
+                    <td><strong>${issue.kcse_index}</strong></td>
+                    <td>${issue.email}</td>
+                    <td><code>${issue.mpesa_receipt}</code></td>
+                    <td>
+                        <button class="btn btn-info btn-sm" onclick="viewScreenshot('${issue.issue_id}')">
+                            <i class="fas fa-image"></i> View
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn btn-success btn-sm me-1" onclick="approvePaymentIssue('${issue.issue_id}')">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="rejectPaymentIssue('${issue.issue_id}')">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter issues
+        function filterIssues() {
+            const filter = document.getElementById('issueFilter').value.toLowerCase();
+            const filtered = allData.issues.filter(i => 
+                (i.kcse_index && i.kcse_index.toLowerCase().includes(filter)) ||
+                (i.email && i.email.toLowerCase().includes(filter)) ||
+                (i.mpesa_receipt && i.mpesa_receipt.toLowerCase().includes(filter))
+            );
+            displayPaymentIssues(filtered);
+        }
+
+        // View screenshot
+        async function viewScreenshot(issueId) {
+            const modal = document.getElementById('screenshotModal');
+            const imgContainer = document.getElementById('screenshotImage');
+            imgContainer.innerHTML = '<div class="loading-spinner"></div> Loading screenshot...';
+            modal.classList.add('active');
+            
+            try {
+                const response = await fetch(`/admin/api/payment-issues/${issueId}/screenshot`);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                imgContainer.innerHTML = `<img src="${url}" class="screenshot-preview" alt="Payment Screenshot" style="max-width: 100%; border-radius: 8px;">`;
+            } catch (error) {
+                imgContainer.innerHTML = '<div class="alert alert-error">Failed to load screenshot</div>';
+            }
+        }
+
+        // Hide screenshot modal
+        function hideScreenshotModal() {
+            document.getElementById('screenshotModal').classList.remove('active');
+        }
+
+        // Approve payment issue
+        async function approvePaymentIssue(issueId) {
+            const notes = prompt('Enter admin notes (optional):');
+            
+            try {
+                const response = await fetch(`/admin/api/payment-issues/${issueId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'approve',
+                        admin_notes: notes || ''
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadPaymentIssues();
+                    loadStats();
+                    loadManualPayments();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error approving payment', 'error');
+            }
+        }
+
+        // Reject payment issue
+        async function rejectPaymentIssue(issueId) {
+            const reason = prompt('Reason for rejection (required):');
+            
+            if (!reason) {
+                showAlert('Please provide a reason for rejection', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/api/payment-issues/${issueId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'reject',
+                        admin_notes: reason
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadPaymentIssues();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error rejecting payment', 'error');
+            }
+        }
+
         // Load failed payments
         async function loadFailedPayments() {
             try {
                 const tbody = document.getElementById('failedPaymentsTable');
-                tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>';
                 
                 const response = await fetch('/admin/api/failed-payments');
                 const data = await response.json();
@@ -895,7 +1215,6 @@
                 
             } catch (error) {
                 console.error('Error loading failed payments:', error);
-                showAlert('Failed to load failed payments', 'error');
             }
         }
 
@@ -936,11 +1255,36 @@
             displayFailedPayments(filtered);
         }
 
+        // Delete failed payments
+        async function deleteFailedPayments() {
+            if (!confirm('Are you sure you want to delete ALL failed payments? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/api/delete-failed-payments', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadFailedPayments();
+                    loadStats();
+                } else {
+                    showAlert(data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to delete failed payments', 'error');
+            }
+        }
+
         // Load users
-        async function loadUsers(page = 1) {
+        async function loadUsers() {
             try {
                 const tbody = document.getElementById('usersTable');
-                tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="loading"><span class="loading-spinner"></span> Loading...</td></tr>';
                 
                 const response = await fetch('/admin/api/users');
                 const data = await response.json();
@@ -960,7 +1304,6 @@
                 
             } catch (error) {
                 console.error('Error loading users:', error);
-                showAlert('Failed to load users', 'error');
             }
         }
 
@@ -982,7 +1325,7 @@
                     statusBadge = '<span class="badge badge-success">Paid</span>';
                 }
                 
-                let typeBadge = 'M-Pesa';
+                let typeBadge = '<span class="badge badge-info">M-Pesa</span>';
                 if (user.manual_activation) {
                     typeBadge = '<span class="badge badge-purple">Manual</span>';
                 }
@@ -1014,114 +1357,6 @@
                 (u.phone_number && u.phone_number.toLowerCase().includes(filter))
             );
             displayUsers(filtered);
-        }
-
-        // Load manual payments
-        async function loadManualPayments() {
-            try {
-                const response = await fetch('/admin/api/users');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const manualUsers = data.users.filter(u => u.manual_activation);
-                    allData.manual = manualUsers;
-                    displayManualPayments(manualUsers);
-                }
-            } catch (error) {
-                console.error('Error loading manual payments:', error);
-            }
-        }
-
-        // Display manual payments
-        // Add this to the displayManualPayments function in admin_dashboard.html
-function displayManualPayments(users) {
-    const tbody = document.getElementById('manualPaymentsTable');
-    
-    if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No manual payments found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = '';
-    
-    users.forEach(user => {
-        const row = document.createElement('tr');
-        const date = user.activated_at ? new Date(user.activated_at).toLocaleDateString() : 'N/A';
-        const index = user.kcse_index || 'N/A';
-        const email = user.email || 'N/A';
-        const receipt = user.payment_receipt || 'N/A';
-        const phone = user.phone_number || 'N/A';
-        
-        // Calculate days left (30 days from activation)
-        let status = 'Active';
-        let statusClass = 'badge-success';
-        let daysLeft = 'N/A';
-        
-        if (user.manual_used) {
-            status = 'Used';
-            statusClass = 'badge-warning';
-            daysLeft = 'Expired';
-        } else if (user.manual_expired) {
-            status = 'Expired';
-            statusClass = 'badge-danger';
-            daysLeft = 'Expired';
-        } else if (user.activated_at) {
-            const activated = new Date(user.activated_at);
-            const now = new Date();
-            const diffDays = 30 - Math.floor((now - activated) / (1000 * 60 * 60 * 24));
-            daysLeft = diffDays > 0 ? `${diffDays} days` : '<span class="badge badge-danger">Expired</span>';
-            if (diffDays <= 0) {
-                status = 'Expired';
-                statusClass = 'badge-danger';
-            }
-        }
-        
-        row.innerHTML = `
-            <td>${date}</td>
-            <td>${index}</td>
-            <td>${email}</td>
-            <td>${receipt}</td>
-            <td>${phone}</td>
-            <td><span class="badge ${statusClass}">${status}</span></td>
-            <td>${daysLeft}</td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-        // Filter manual payments
-        function filterManualPayments() {
-            const filter = document.getElementById('manualFilter').value.toLowerCase();
-            const filtered = allData.manual.filter(u => 
-                (u.kcse_index && u.kcse_index.toLowerCase().includes(filter)) ||
-                (u.email && u.email.toLowerCase().includes(filter))
-            );
-            displayManualPayments(filtered);
-        }
-
-        // Delete failed payments
-        async function deleteFailedPayments() {
-            if (!confirm('Are you sure you want to delete ALL failed payments? This cannot be undone.')) {
-                return;
-            }
-            
-            try {
-                const response = await fetch('/admin/api/delete-failed-payments', {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert(data.message, 'success');
-                    loadFailedPayments();
-                    loadStats();
-                } else {
-                    showAlert(data.error, 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting failed payments:', error);
-                showAlert('Failed to delete failed payments', 'error');
-            }
         }
 
         // Show manual payment modal

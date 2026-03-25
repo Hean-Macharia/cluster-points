@@ -1677,6 +1677,309 @@ def check_manual_payment():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+    
+import os
+from werkzeug.utils import secure_filename
+import base64
+
+# Configuration for uploads
+UPLOAD_FOLDER = 'uploads/payment_issues'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+# Create upload folder if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Create payment_issues collection if using MongoDB
+# Create payment_issues collection if using MongoDB
+if db is not None:
+    payment_issues_collection = db['payment_issues']
+else:
+    payment_issues_collection = DummyCollection()
+
+# ===== PAYMENT ISSUE REPORTING ROUTES =====
+
+@app.route('/api/report-payment-issue', methods=['POST'])
+def report_payment_issue():
+    """Handle user payment issue reports"""
+    try:
+        kcse_index = request.form.get('kcse_index', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        mpesa_receipt = request.form.get('mpesa_receipt', '').strip().upper()
+        
+        # Validate inputs
+        if not kcse_index or not email or not mpesa_receipt:
+            return jsonify({'success': False, 'error': 'All fields are required'}), 400
+        
+        is_valid_index, index_msg = validate_kcse_index(kcse_index)
+        if not is_valid_index:
+            return jsonify({'success': False, 'error': index_msg}), 400
+        
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            return jsonify({'success': False, 'error': 'Invalid email address'}), 400
+        
+        # Check if screenshot was uploaded
+        screenshot_file = request.files.get('screenshot')
+        if not screenshot_file or screenshot_file.filename == '':
+            return jsonify({'success': False, 'error': 'Screenshot of M-Pesa message is required'}), 400
+        
+        if not allowed_file(screenshot_file.filename):
+            return jsonify({'success': False, 'error': 'Only image files (PNG, JPG, JPEG) are allowed'}), 400
+        
+        # Check if user already has a pending request
+        existing_request = payment_issues_collection.find_one({
+            '$or': [
+                {'kcse_index': kcse_index},
+                {'email': email},
+                {'mpesa_receipt': mpesa_receipt}
+            ],
+            'status': {'$in': ['pending', 'approved']}
+        })
+        
+        if existing_request:
+            if existing_request['status'] == 'pending':
+                return jsonify({
+                    'success': False, 
+                    'error': 'You already have a pending request. Please wait for review within 6 hours.'
+                }), 400
+            elif existing_request['status'] == 'approved':
+                return jsonify({
+                    'success': False,
+                    'error': 'Your payment has already been verified! Please login and calculate your results.'
+                }), 400
+        
+        # Save screenshot
+        filename = secure_filename(f"{kcse_index}_{int(time.time())}_{screenshot_file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        screenshot_file.save(filepath)
+        
+        # Create payment issue record
+        issue_id = str(uuid.uuid4())
+        issue_data = {
+            'issue_id': issue_id,
+            'kcse_index': kcse_index,
+            'email': email,
+            'mpesa_receipt': mpesa_receipt,
+            'screenshot_path': filepath,
+            'screenshot_filename': filename,
+            'status': 'pending',
+            'reported_at': datetime.now(),
+            'approved_at': None,
+            'admin_notes': None
+        }
+        
+        payment_issues_collection.insert_one(issue_data)
+        
+        # Send confirmation email (optional)
+        try:
+            send_confirmation_email(email, kcse_index, issue_id)
+        except Exception as e:
+            logger.error(f"Failed to send confirmation email: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Payment issue reported successfully. Our team will review within 6 hours.',
+            'issue_id': issue_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Payment issue report error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/payment-issues')
+@admin_required
+def admin_get_payment_issues():
+    """Get all payment issues for admin review"""
+    try:
+        issues = list(payment_issues_collection.find(
+            {'status': 'pending'},
+            sort=[('reported_at', -1)]
+        ))
+        
+        for issue in issues:
+            issue['_id'] = str(issue['_id'])
+            issue['issue_id'] = str(issue['issue_id'])
+            if issue.get('reported_at'):
+                issue['reported_at'] = issue['reported_at'].isoformat()
+        
+        return jsonify({'success': True, 'issues': issues})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/payment-issues/<issue_id>', methods=['POST'])
+@admin_required
+def admin_approve_payment_issue(issue_id):
+    """Approve a payment issue and create manual payment"""
+    try:
+        data = request.json
+        action = data.get('action')  # 'approve' or 'reject'
+        admin_notes = data.get('admin_notes', '')
+        
+        issue = payment_issues_collection.find_one({'issue_id': issue_id})
+        
+        if not issue:
+            return jsonify({'success': False, 'error': 'Issue not found'}), 404
+        
+        if action == 'approve':
+            # Create manual payment for the user
+            kcse_index = issue['kcse_index']
+            email = issue['email']
+            mpesa_receipt = issue['mpesa_receipt']
+            
+            # Check if user exists
+            user = users_collection.find_one({
+                '$or': [{'kcse_index': kcse_index}, {'email': email}]
+            })
+            
+            if user:
+                user_id = user['user_id']
+                users_collection.update_one(
+                    {'user_id': user_id},
+                    {'$set': {
+                        'payment_status': 'completed',
+                        'payment_receipt': mpesa_receipt,
+                        'manual_activation': True,
+                        'activated_at': datetime.now(),
+                        'payment_verified_by': 'admin',
+                        'payment_verified_at': datetime.now()
+                    }}
+                )
+            else:
+                # Create new user
+                user_id = str(uuid.uuid4())
+                users_collection.insert_one({
+                    'user_id': user_id,
+                    'kcse_index': kcse_index,
+                    'email': email,
+                    'created_at': datetime.now(),
+                    'payment_status': 'completed',
+                    'payment_receipt': mpesa_receipt,
+                    'manual_activation': True,
+                    'activated_at': datetime.now(),
+                    'payment_verified_by': 'admin',
+                    'payment_verified_at': datetime.now()
+                })
+            
+            # Add payment record
+            payments_collection.insert_one({
+                'transaction_id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'kcse_index': kcse_index,
+                'mpesa_receipt': mpesa_receipt,
+                'amount': PAYMENT_AMOUNT,
+                'status': 'completed',
+                'manual_payment': True,
+                'payment_issue_id': issue_id,
+                'created_at': datetime.now(),
+                'verified_by': 'admin'
+            })
+            
+            # Update issue status
+            payment_issues_collection.update_one(
+                {'issue_id': issue_id},
+                {'$set': {
+                    'status': 'approved',
+                    'approved_at': datetime.now(),
+                    'admin_notes': admin_notes,
+                    'approved_by': session.get('admin_user', 'admin')
+                }}
+            )
+            
+            # Send approval email
+            try:
+                send_approval_email(email, kcse_index, mpesa_receipt)
+            except Exception as e:
+                logger.error(f"Failed to send approval email: {e}")
+            
+            # Delete screenshot to save space
+            screenshot_path = issue.get('screenshot_path')
+            if screenshot_path and os.path.exists(screenshot_path):
+                os.remove(screenshot_path)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Payment approved for {kcse_index}',
+                'user_id': user_id
+            })
+            
+        elif action == 'reject':
+            # Reject the request
+            payment_issues_collection.update_one(
+                {'issue_id': issue_id},
+                {'$set': {
+                    'status': 'rejected',
+                    'admin_notes': admin_notes,
+                    'rejected_at': datetime.now(),
+                    'rejected_by': session.get('admin_user', 'admin')
+                }}
+            )
+            
+            # Send rejection email
+            try:
+                send_rejection_email(issue['email'], issue['kcse_index'], admin_notes)
+            except Exception as e:
+                logger.error(f"Failed to send rejection email: {e}")
+            
+            # Delete screenshot to save space
+            screenshot_path = issue.get('screenshot_path')
+            if screenshot_path and os.path.exists(screenshot_path):
+                os.remove(screenshot_path)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Request rejected for {issue["kcse_index"]}'
+            })
+        
+        else:
+            return jsonify({'success': False, 'error': 'Invalid action'}), 400
+            
+    except Exception as e:
+        logger.error(f"Admin approve payment issue error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/api/payment-issues/<issue_id>/screenshot')
+@admin_required
+def admin_get_screenshot(issue_id):
+    """Serve screenshot for admin review"""
+    try:
+        issue = payment_issues_collection.find_one({'issue_id': issue_id})
+        
+        if not issue or not issue.get('screenshot_path'):
+            return jsonify({'error': 'Screenshot not found'}), 404
+        
+        screenshot_path = issue['screenshot_path']
+        
+        if not os.path.exists(screenshot_path):
+            return jsonify({'error': 'File not found'}), 404
+        
+        return send_file(screenshot_path, mimetype='image/jpeg')
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Email helper functions (implement based on your email service)
+def send_confirmation_email(email, kcse_index, issue_id):
+    """Send confirmation email to user"""
+    # Implement your email sending logic here
+    pass
+
+def send_approval_email(email, kcse_index, mpesa_receipt):
+    """Send approval email to user"""
+    # Implement your email sending logic here
+    pass
+
+def send_rejection_email(email, kcse_index, reason):
+    """Send rejection email to user"""
+    # Implement your email sending logic here
+    pass
 
 if __name__ == '__main__':
     print("=" * 60)
@@ -1689,7 +1992,7 @@ if __name__ == '__main__':
     print(f"Payment Amount: Ksh {PAYMENT_AMOUNT}")
     print("=" * 60)
     
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8080))
     is_render = os.environ.get('RENDER', False)
     
     if is_render:

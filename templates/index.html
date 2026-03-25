@@ -647,6 +647,80 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(0,0,0,0.25);
         }
+        .help-icon {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, var(--kuccps-red) 0%, #B71C1C 100%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.help-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(198, 40, 40, 0.4);
+}
+
+.help-icon i {
+    color: white;
+    font-size: 28px;
+}
+
+.report-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--kuccps-yellow);
+    color: var(--kuccps-black);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.receipt-preview {
+    max-width: 100%;
+    max-height: 200px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--kuccps-medium-grey);
+}
+
+.file-input-label {
+    background: var(--kuccps-light-grey);
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    border: 2px dashed var(--kuccps-medium-grey);
+    transition: all 0.3s ease;
+}
+
+.file-input-label:hover {
+    border-color: var(--kuccps-red);
+    background: rgba(198, 40, 40, 0.05);
+}
+
+.manual-approval-badge {
+    background: var(--kuccps-purple);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
     </style>
 </head>
 <body>
@@ -759,7 +833,107 @@
             </div>
         </div>
     </div>
+<!-- Help Icon -->
+<div class="help-icon" onclick="showPaymentIssueModal()">
+    <i class="fas fa-question"></i>
+    <span class="report-badge">!</span>
+</div>
 
+<!-- Payment Issue Report Modal -->
+<div class="modal fade" id="paymentIssueModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-headset me-2"></i> Experienced Payment Issues?
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    If you made a payment but didn't receive your results, please submit your details below. 
+                    Our support team will verify and activate your account within 6 hours.
+                </div>
+                
+                <form id="paymentIssueForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-id-card me-1"></i> KCSE Index Number *
+                        </label>
+                        <input type="text" class="form-control" id="issue_kcse_index" 
+                               placeholder="12345678912/2024" required>
+                        <div class="form-text">Format: 11 digits followed by /year</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-envelope me-1"></i> Email Address *
+                        </label>
+                        <input type="email" class="form-control" id="issue_email" 
+                               placeholder="your.email@example.com" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-receipt me-1"></i> M-Pesa Receipt Number *
+                        </label>
+                        <input type="text" class="form-control" id="issue_mpesa_receipt" 
+                               placeholder="ABC123XYZ45" required>
+                        <div class="form-text">10-digit code from your M-Pesa confirmation message</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-image me-1"></i> Screenshot of M-Pesa Message *
+                        </label>
+                        <div class="file-input-label" onclick="document.getElementById('issue_screenshot').click()">
+                            <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                            <div>Click to upload screenshot</div>
+                            <small class="text-muted">PNG, JPG up to 5MB</small>
+                        </div>
+                        <input type="file" id="issue_screenshot" accept="image/*" style="display: none;" required>
+                        <div id="screenshotPreview" class="mt-2"></div>
+                    </div>
+                    
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>Processing Time:</strong> Your request will be reviewed within 6 hours. 
+                        You'll receive a confirmation email once approved.
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="submitIssueBtn">
+                            <i class="fas fa-paper-plane me-2"></i> Submit Payment Issue Report
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Message Modal -->
+<div class="modal fade" id="issueSuccessModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Report Submitted</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h6>Your payment issue has been reported!</h6>
+                <p class="mt-3">We'll review your request and activate your account within <strong>6 hours</strong>.</p>
+                <p class="text-muted small">Check your email for updates.</p>
+                <button class="btn btn-success mt-2" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
     <!-- Payment Processing Modal -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog modal-md">
@@ -1721,7 +1895,114 @@
             hasPaid = false;
         }
     }
+// Show payment issue modal
+function showPaymentIssueModal() {
+    const modal = new bootstrap.Modal(document.getElementById('paymentIssueModal'));
+    modal.show();
+    
+    // Clear form
+    document.getElementById('paymentIssueForm').reset();
+    document.getElementById('screenshotPreview').innerHTML = '';
+}
 
+// Handle screenshot preview
+document.getElementById('issue_screenshot').addEventListener('change', function(e) {
+    const preview = document.getElementById('screenshotPreview');
+    const file = e.target.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            preview.innerHTML = `
+                <div class="position-relative">
+                    <img src="${event.target.result}" class="receipt-preview" alt="Screenshot Preview">
+                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" 
+                            onclick="removeScreenshot()" style="border-radius: 50%;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+function removeScreenshot() {
+    document.getElementById('issue_screenshot').value = '';
+    document.getElementById('screenshotPreview').innerHTML = '';
+}
+
+// Handle payment issue form submission
+document.getElementById('paymentIssueForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitIssueBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
+    submitBtn.disabled = true;
+    
+    try {
+        const formData = new FormData();
+        formData.append('kcse_index', document.getElementById('issue_kcse_index').value);
+        formData.append('email', document.getElementById('issue_email').value);
+        formData.append('mpesa_receipt', document.getElementById('issue_mpesa_receipt').value);
+        formData.append('screenshot', document.getElementById('issue_screenshot').files[0]);
+        
+        const response = await fetch('/api/report-payment-issue', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Close the issue modal
+            const issueModal = bootstrap.Modal.getInstance(document.getElementById('paymentIssueModal'));
+            issueModal.hide();
+            
+            // Show success modal
+            const successModal = new bootstrap.Modal(document.getElementById('issueSuccessModal'));
+            successModal.show();
+            
+            // Clear form
+            document.getElementById('paymentIssueForm').reset();
+            document.getElementById('screenshotPreview').innerHTML = '';
+        } else {
+            showNotification(data.error || 'Failed to submit report. Please try again.', 'error');
+        }
+    } catch (error) {
+        console.error('Error submitting report:', error);
+        showNotification('Network error. Please try again.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+// Show flash message for pending manual activation
+async function checkPendingActivation() {
+    try {
+        const response = await fetch('/api/check-pending-activation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                identifier: document.getElementById('user_kcse_index')?.value || 
+                           document.getElementById('retrieve_kcse_index')?.value 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.has_pending_activation) {
+            showNotification(
+                'Your payment issue report is being reviewed. Please check back in 6 hours for activation.',
+                'warning'
+            );
+        }
+    } catch (error) {
+        console.error('Error checking pending activation:', error);
+    }
+}
     // Show loading spinner
     function showLoading(show = true, text = 'Loading...') {
         const spinner = document.getElementById('loadingSpinner');
